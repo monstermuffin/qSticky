@@ -10,6 +10,43 @@ qSticky is an automated port forwarding manager for Gluetun and qBittorrent. It 
 - 🐳 Docker support
 - 📝 Logging
 
+## How it Works
+
+qSticky acts as a bridge between Gluetun's VPN port forwarding and qBittorrent's connection settings.
+
+1. **Port Monitoring**
+   - Gluetun writes the forwarded port number to `/tmp/gluetun/forwarded_port`
+   - qSticky actively monitors this file for changes using file system events
+   - If event watching fails, falls back to polling every 30 seconds (configurable)
+
+2. **Port Management**
+   - When a new port is detected:
+     1. Reads the new port number from the file
+     2. Connects to qBittorrent's WebUI API
+     3. Updates qBittorrent's listening port
+     4. Verifies the change was successful
+
+3. **Health Monitoring**
+   - Maintains a health status file
+   - Checks qBittorrent connectivity regularly
+   - Tracks port changes and any errors
+   - Provides Docker health checks
+
+4. **Recovery & Resilience**
+   - Automatically retries on connection failures
+   - Maintains session with qBittorrent
+   - Handles network interruptions gracefully
+   - Logs important events and errors
+
+### Flow
+```mermaid
+graph TD;
+    Gluetun-->|Writes Port|File;
+    File-->|Monitors|qSticky;
+    qSticky-->|Updates Port|qBit;
+    qSticky-->|Writes|Health;
+```
+
 ## Quick Start
 
 ### Port Forwarding Setup
@@ -71,6 +108,94 @@ All configuration is done through environment variables:
 | QSTICKY_LOG_LEVEL | Logging level (DEBUG, INFO, WARNING, ERROR) | INFO |
 | HEALTH_FILE | Path to health status file | /tmp/health/status.json |
 
+### Network Configuration
+
+qSticky can be configured for various networking scenarios:
+
+#### Using Gluetun's Network (Recommended)
+When using `network_mode: "service:gluetun"`, all containers share Gluetun's network stack:
+
+```yaml
+services:
+  gluetun:
+    # ... gluetun config ...
+
+  qbittorrent:
+    network_mode: "service:gluetun"
+    environment:
+      - WEBUI_PORT=8080
+  
+  qsticky:
+    network_mode: "service:gluetun"
+    environment:
+      - QSTICKY_QBITTORRENT_HOST=localhost  # Using localhost works here
+      - QSTICKY_QBITTORRENT_PORT=8080
+```
+
+In this setup:
+- Use `localhost` as qBittorrent host
+- All containers share the same network namespace
+- All traffic goes through VPN
+- No additional network configuration needed
+
+#### Using Separate Networks
+If not using `network_mode: "service:gluetun"`, but still running on the same Docker host:
+
+```yaml
+services:
+  qbittorrent:
+    container_name: qbittorrent
+    networks:
+      - vpn_network
+    # ... other config ...
+
+  qsticky:
+    networks:
+      - vpn_network
+    environment:
+      - QSTICKY_QBITTORRENT_HOST=qbittorrent  # Use container name as hostname
+      - QSTICKY_QBITTORRENT_PORT=8080
+
+networks:
+  vpn_network:
+    name: vpn_network
+```
+
+In this setup:
+- Use the container name or service name as qBittorrent host
+- Containers must be on the same Docker network
+- Configure proper network access between containers
+- Consider VPN requirements for your setup
+
+#### Remote Host Setup
+qSticky can also manage a qBittorrent instance running on a different machine:
+
+```yaml
+services:
+  qsticky:
+    environment:
+      - QSTICKY_QBITTORRENT_HOST=qbit.mydomain.com  # Remote hostname or IP
+      - QSTICKY_QBITTORRENT_PORT=8080
+      - QSTICKY_USE_HTTPS=true  # Recommended for remote access
+```
+
+In this setup:
+- Use a hostname or IP address of the remote qBittorrent server
+- Consider enabling HTTPS
+- Make sure qBittorrent's WebUI is accessible from the qSticky host
+
+I'm not entirely sure where this would be necessary if you're tunneling qBittorent via Gluetun but ¯\_(ツ)_/¯.
+
+### User Permissions
+qSticky can run as any user, which is particularly useful when running with qBittorrent's user permissions. To run as a specific user, use the `user:` directive in your docker-compose file:
+
+```yaml
+services:
+  qsticky:
+    image: ghcr.io/monstermuffin/qsticky:latest
+    user: "your-qbittorrent-user"  # Optional: Run as specific user
+```
+
 ### Health Checks
 qSticky includes Docker health checks. The health status is written to a file at `/app/health/status.json`. This file is managed internally by the container - you don't need to mount or manage it. Health status includes:
 - Overall health status
@@ -85,16 +210,6 @@ The Docker container will be marked as unhealthy if:
 - qBittorrent becomes unreachable
 - Port updates fail repeatedly
 - Other critical errors occur
-
-### User Permissions
-qSticky can run as any user, which is particularly useful when running with qBittorrent's user permissions. To run as a specific user, use the `user:` directive in your docker-compose file:
-
-```yaml
-services:
-  qsticky:
-    image: ghcr.io/monstermuffin/qsticky:latest
-    user: "your-qbittorrent-user"  # Optional: Run as specific user
-    ...
 
 ## Development
 
