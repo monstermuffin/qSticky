@@ -9,7 +9,7 @@ RUN python -m pip install --no-cache-dir -r requirements.txt && \
     useradd -m appuser && \
     mkdir -p /app/health && \
     chown -R appuser:appuser /app && \
-    chmod 755 /app/health
+    chmod -R 775 /app/health
 
 ENV HEALTH_FILE=/app/health/status.json
 

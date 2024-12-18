@@ -19,3 +19,5 @@ coverage.xml
 .LSOverride
 ._*
 .vscode/
+tmp/
+docker-compose.yml

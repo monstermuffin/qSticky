@@ -220,26 +220,16 @@ class PortManager:
     async def update_health_file(self):
         health_data = await self.get_health()
         try:
-            self.logger.debug(f"Writing health status to {self.health_file}")
-            self.logger.debug(f"Current user: {os.getuid()}:{os.getgid()}")
-            
             health_dir = os.path.dirname(self.health_file)
-            os.makedirs(health_dir, exist_ok=True)
+            os.makedirs(health_dir, mode=0o775, exist_ok=True)
+            os.chmod(health_dir, 0o775)
             
-            if not os.access(health_dir, os.W_OK):
-                self.logger.error(f"Directory {health_dir} is not writable!")
-                stat = os.stat(health_dir)
-                self.logger.error(f"Directory permissions: {stat.st_mode:o}")
-                self.logger.error(f"Directory owner: {stat.st_uid}:{stat.st_gid}")
-                return
-
+            self.logger.debug(f"Writing health status to {self.health_file}")
             with open(self.health_file, 'w') as f:
                 json.dump(health_data, f)
                 self.logger.debug(f"Successfully wrote health status")
-                
         except Exception as e:
             self.logger.error(f"Failed to write health status: {str(e)}")
-            self.logger.error(f"Full error: {type(e).__name__}: {str(e)}")
             import traceback
             self.logger.error(f"Traceback: {traceback.format_exc()}")
             
