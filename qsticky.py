@@ -74,6 +74,8 @@ class PortManager:
         self.shutdown_event = asyncio.Event()
         self.retry_delays = [1, 2, 4, 8, 16, 32, 60]
         self.health_file = os.getenv('HEALTH_FILE', '/tmp/health_status.json')
+        self.last_login_failed = False
+        self.first_run = True
 
     def _setup_logger(self) -> logging.Logger:
         logger = logging.getLogger("qsticky")
@@ -140,13 +142,16 @@ class PortManager:
                 }
             ) as response:
                 if response.status == 200:
-                    self.logger.info("Successfully logged in to qBittorrent")
+                    if self.first_run or self.last_login_failed:
+                        self.logger.info("Successfully logged in to qBittorrent")
+                        self.last_login_failed = False
                     self.health_status.healthy = True
                     return True
                 else:
                     self.logger.error(f"Login failed with status {response.status}")
                     self.health_status.healthy = False
                     self.health_status.last_error = f"Login failed: {response.status}"
+                    self.last_login_failed = True
                     return False
 
     async def _update_port(self, new_port: int) -> bool:
@@ -158,7 +163,6 @@ class PortManager:
             ) as response:
                 if response.status == 200:
                     self.current_port = new_port
-                    self.logger.info(f"Successfully updated port to {new_port}")
                     return True
                 else:
                     self.logger.error(f"Failed to update port: {response.status}")
@@ -197,13 +201,18 @@ class PortManager:
                 self.health_status.last_port_change = datetime.now()
                 verified_port = await self.get_current_qbit_port()
                 if verified_port == new_port:
-                    self.logger.info("Port change verified successfully")
+                    self.logger.info(f"Successfully updated port to {new_port}")
                 else:
                     self.logger.error("Port change verification failed")
                     self.health_status.healthy = False
                     self.health_status.last_error = "Port change verification failed"
         else:
-            self.logger.debug(f"Port {new_port} already set correctly")
+            if self.first_run:
+                self.logger.info(f"Initial port check: {new_port} already set correctly")
+            else:
+                self.logger.debug(f"Port {new_port} already set correctly")
+        
+        self.first_run = False
 
     async def get_health(self) -> Dict[str, Any]:
         now = datetime.now()
@@ -229,16 +238,6 @@ class PortManager:
                 self.logger.debug(f"Successfully wrote health status")
         except Exception as e:
             self.logger.error(f"Failed to write health status: {str(e)}")
-            import traceback
-            self.logger.error(f"Traceback: {traceback.format_exc()}")
-            
-            try:
-                self.logger.error(f"Current working directory: {os.getcwd()}")
-                self.logger.error(f"File path absolute: {os.path.abspath(self.health_file)}")
-                self.logger.error(f"Directory permissions: {oct(os.stat(health_dir).st_mode)[-3:]}")
-                self.logger.error(f"Current UID: {os.getuid()}")
-            except Exception as e2:
-                self.logger.error(f"Failed to get additional debug info: {str(e2)}")
 
     async def health_check_task(self):
         while not self.shutdown_event.is_set():
