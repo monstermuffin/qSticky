@@ -1,5 +1,6 @@
-aiohttp>=3.11.10
-pydantic>=2.10.3
-pydantic-settings>=2.7.0
-watchfiles>=1.0.3
-typing-extensions>=4.12.2
+aiohttp==3.11.10
+pydantic==2.10.3
+pydantic-settings==2.7.0
+watchfiles==1.0.3
+typing-extensions==4.12.2
+dataclasses==0.8
