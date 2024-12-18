@@ -1,0 +1,37 @@
+{
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+      "config:base"
+    ],
+    "packageRules": [
+      {
+        "matchUpdateTypes": ["minor", "patch"],
+        "matchCurrentVersion": "!/^0/",
+        "automerge": true
+      },
+      {
+        "matchDepTypes": ["devDependencies"],
+        "automerge": true
+      }
+    ],
+    "docker": {
+      "enabled": true
+    },
+    "pip_requirements": {
+      "enabled": true
+    },
+    "python": {
+      "enabled": true
+    },
+    "schedule": ["at any time"],
+    "timezone": "UTC",
+    "labels": ["dependencies"],
+    "semanticCommits": "enabled",
+    "dependencyDashboard": true,
+    "prHourlyLimit": 0,
+    "prConcurrentLimit": 0,
+    "vulnerabilityAlerts": {
+      "labels": ["security"],
+      "automerge": false
+    }
+  }
