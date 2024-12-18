@@ -69,6 +69,25 @@ All configuration is done through environment variables:
 | QSTICKY_PORT_FILE_PATH | Path to Gluetun forwarded port file | /tmp/gluetun/forwarded_port |
 | QSTICKY_CHECK_INTERVAL | Fallback check interval in seconds | 30 |
 | QSTICKY_LOG_LEVEL | Logging level (DEBUG, INFO, WARNING, ERROR) | INFO |
+| HEALTH_FILE | Path to health status file | /tmp/health/status.json |
+
+### Health Checks
+
+qSticky includes Docker health. The health status is written to a file at `/tmp/health/status.json`, this is done to avoid publishing any ports. Health status includes:
+- Overall health status
+- Uptime
+- Last check timestamp
+- Last port change time
+- Current port
+- Last error (if any)
+
+The Docker container will be marked as unhealthy if:
+- The application fails to write health status
+- qBittorrent becomes unreachable
+- Port updates fail repeatedly
+- Other critical errors occur
+
+When running outside of Docker, ensure the `/tmp/health` directory exists and is writable by the running user. The health file location can be customized using the `HEALTH_FILE` environment variable.
 
 ## Development
 
