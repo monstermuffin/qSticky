@@ -20,4 +20,3 @@ coverage.xml
 ._*
 .vscode/
 tmp/
-docker-compose.yml

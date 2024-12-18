@@ -72,8 +72,7 @@ All configuration is done through environment variables:
 | HEALTH_FILE | Path to health status file | /tmp/health/status.json |
 
 ### Health Checks
-
-qSticky includes Docker health. The health status is written to a file at `/app/health/status.json`, this is done to avoid publishing any ports. Health status includes:
+qSticky includes Docker health checks. The health status is written to a file at `/app/health/status.json`. This file is managed internally by the container - you don't need to mount or manage it. Health status includes:
 - Overall health status
 - Uptime
 - Last check timestamp
@@ -87,7 +86,15 @@ The Docker container will be marked as unhealthy if:
 - Port updates fail repeatedly
 - Other critical errors occur
 
-When running outside of Docker, ensure the `/app/health` directory exists and is writable by the running user. The health file location can be customized using the `HEALTH_FILE` environment variable.
+### User Permissions
+qSticky can run as any user, which is particularly useful when running with qBittorrent's user permissions. To run as a specific user, use the `user:` directive in your docker-compose file:
+
+```yaml
+services:
+  qsticky:
+    image: ghcr.io/monstermuffin/qsticky:latest
+    user: "your-qbittorrent-user"  # Optional: Run as specific user
+    ...
 
 ## Development
 
