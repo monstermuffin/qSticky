@@ -1,6 +1,8 @@
 # qSticky
 qSticky is an automated port forwarding manager for Gluetun and qBittorrent. It automatically updates qBittorrent's listening port whenever Gluetun receives a new forwarded port.
 
+![](img/SCR-20241218-lfff.png)
+
 ## Features
 - 🔄 Automatic port synchronization
 - 👀 Real-time file watching with fallback polling
