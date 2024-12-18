@@ -7,11 +7,11 @@ COPY requirements.txt .
 
 RUN python -m pip install --no-cache-dir -r requirements.txt && \
     useradd -m appuser && \
-    mkdir -p /tmp/health && \
-    chown -R appuser:appuser /app /tmp/health && \
-    chmod 755 /tmp/health
+    mkdir -p /app/health && \
+    chown -R appuser:appuser /app && \
+    chmod 755 /app/health
 
-ENV HEALTH_FILE=/tmp/health/status.json
+ENV HEALTH_FILE=/app/health/status.json
 
 USER appuser
 
