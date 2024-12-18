@@ -1,24 +1,12 @@
-FROM python:slim AS builder
-
-WORKDIR /app
-
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    gcc \
-    libc-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY requirements.txt .
-RUN python -m pip install --no-cache-dir -r requirements.txt
-
 FROM python:slim
 
 WORKDIR /app
 
-COPY --from=builder /usr/local/lib/python*/site-packages/ /usr/local/lib/python*/site-packages/
 COPY qsticky.py .
+COPY requirements.txt .
 
-RUN useradd -m appuser && \
+RUN python -m pip install --no-cache-dir -r requirements.txt && \
+    useradd -m appuser && \
     mkdir -p /tmp/health && \
     chown -R appuser:appuser /app /tmp/health && \
     chmod 755 /tmp/health
