@@ -12,6 +12,11 @@
       {
         "matchDepTypes": ["devDependencies"],
         "automerge": true
+      },
+      {
+        "matchPackageNames": ["python"],
+        "ignoreUnstable": true,
+        "allowedVersions": "<3.13"
       }
     ],
     "docker": {
