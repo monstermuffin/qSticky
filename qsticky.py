@@ -221,8 +221,7 @@ class PortManager:
         health_data = await self.get_health()
         try:
             health_dir = os.path.dirname(self.health_file)
-            os.makedirs(health_dir, mode=0o775, exist_ok=True)
-            os.chmod(health_dir, 0o775)
+            os.makedirs(health_dir, exist_ok=True)
             
             self.logger.debug(f"Writing health status to {self.health_file}")
             with open(self.health_file, 'w') as f:
@@ -234,11 +233,10 @@ class PortManager:
             self.logger.error(f"Traceback: {traceback.format_exc()}")
             
             try:
-                import pwd
-                user = pwd.getpwuid(os.getuid()).pw_name
-                self.logger.error(f"Current user name: {user}")
                 self.logger.error(f"Current working directory: {os.getcwd()}")
                 self.logger.error(f"File path absolute: {os.path.abspath(self.health_file)}")
+                self.logger.error(f"Directory permissions: {oct(os.stat(health_dir).st_mode)[-3:]}")
+                self.logger.error(f"Current UID: {os.getuid()}")
             except Exception as e2:
                 self.logger.error(f"Failed to get additional debug info: {str(e2)}")
 
