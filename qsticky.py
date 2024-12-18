@@ -217,40 +217,40 @@ class PortManager:
             "timestamp": now.isoformat()
         }
 
-async def update_health_file(self):
-    health_data = await self.get_health()
-    try:
-        self.logger.debug(f"Writing health status to {self.health_file}")
-        self.logger.debug(f"Current user: {os.getuid()}:{os.getgid()}")
-        
-        health_dir = os.path.dirname(self.health_file)
-        os.makedirs(health_dir, exist_ok=True)
-        
-        if not os.access(health_dir, os.W_OK):
-            self.logger.error(f"Directory {health_dir} is not writable!")
-            stat = os.stat(health_dir)
-            self.logger.error(f"Directory permissions: {stat.st_mode:o}")
-            self.logger.error(f"Directory owner: {stat.st_uid}:{stat.st_gid}")
-            return
-
-        with open(self.health_file, 'w') as f:
-            json.dump(health_data, f)
-            self.logger.debug(f"Successfully wrote health status")
-            
-    except Exception as e:
-        self.logger.error(f"Failed to write health status: {str(e)}")
-        self.logger.error(f"Full error: {type(e).__name__}: {str(e)}")
-        import traceback
-        self.logger.error(f"Traceback: {traceback.format_exc()}")
-        
+    async def update_health_file(self):
+        health_data = await self.get_health()
         try:
-            import pwd
-            user = pwd.getpwuid(os.getuid()).pw_name
-            self.logger.error(f"Current user name: {user}")
-            self.logger.error(f"Current working directory: {os.getcwd()}")
-            self.logger.error(f"File path absolute: {os.path.abspath(self.health_file)}")
-        except Exception as e2:
-            self.logger.error(f"Failed to get additional debug info: {str(e2)}")
+            self.logger.debug(f"Writing health status to {self.health_file}")
+            self.logger.debug(f"Current user: {os.getuid()}:{os.getgid()}")
+            
+            health_dir = os.path.dirname(self.health_file)
+            os.makedirs(health_dir, exist_ok=True)
+            
+            if not os.access(health_dir, os.W_OK):
+                self.logger.error(f"Directory {health_dir} is not writable!")
+                stat = os.stat(health_dir)
+                self.logger.error(f"Directory permissions: {stat.st_mode:o}")
+                self.logger.error(f"Directory owner: {stat.st_uid}:{stat.st_gid}")
+                return
+
+            with open(self.health_file, 'w') as f:
+                json.dump(health_data, f)
+                self.logger.debug(f"Successfully wrote health status")
+                
+        except Exception as e:
+            self.logger.error(f"Failed to write health status: {str(e)}")
+            self.logger.error(f"Full error: {type(e).__name__}: {str(e)}")
+            import traceback
+            self.logger.error(f"Traceback: {traceback.format_exc()}")
+            
+            try:
+                import pwd
+                user = pwd.getpwuid(os.getuid()).pw_name
+                self.logger.error(f"Current user name: {user}")
+                self.logger.error(f"Current working directory: {os.getcwd()}")
+                self.logger.error(f"File path absolute: {os.path.abspath(self.health_file)}")
+            except Exception as e2:
+                self.logger.error(f"Failed to get additional debug info: {str(e2)}")
 
     async def health_check_task(self):
         while not self.shutdown_event.is_set():
@@ -291,9 +291,10 @@ async def update_health_file(self):
             await self.session.close()
             self.logger.debug("Closed aiohttp session")
         try:
-            os.remove(self.health_file)
-        except:
-            pass
+            if os.path.exists(self.health_file):
+                os.remove(self.health_file)
+        except Exception as e:
+            self.logger.error(f"Failed to remove health file: {str(e)}")
 
     def setup_signal_handlers(self):
         loop = asyncio.get_running_loop()

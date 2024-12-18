@@ -73,7 +73,7 @@ All configuration is done through environment variables:
 
 ### Health Checks
 
-qSticky includes Docker health. The health status is written to a file at `/tmp/health/status.json`, this is done to avoid publishing any ports. Health status includes:
+qSticky includes Docker health. The health status is written to a file at `/app/health/status.json`, this is done to avoid publishing any ports. Health status includes:
 - Overall health status
 - Uptime
 - Last check timestamp
@@ -87,7 +87,7 @@ The Docker container will be marked as unhealthy if:
 - Port updates fail repeatedly
 - Other critical errors occur
 
-When running outside of Docker, ensure the `/tmp/health` directory exists and is writable by the running user. The health file location can be customized using the `HEALTH_FILE` environment variable.
+When running outside of Docker, ensure the `/app/health` directory exists and is writable by the running user. The health file location can be customized using the `HEALTH_FILE` environment variable.
 
 ## Development
 
