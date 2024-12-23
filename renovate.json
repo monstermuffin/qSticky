@@ -37,6 +37,6 @@
     "prConcurrentLimit": 0,
     "vulnerabilityAlerts": {
       "labels": ["security"],
-      "automerge": false
+      "automerge": true
     }
   }
