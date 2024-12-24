@@ -3,6 +3,8 @@ qSticky is an automated port forwarding manager for Gluetun and qBittorrent. It 
 
 ![](img/scrn_rec.gif)
 
+![](img/SCR-20241218-lfff.png)
+
 ## Features
 - 🔄 Automatic port synchronization
 - 👀 Real-time file watching with fallback polling
@@ -110,10 +112,7 @@ All configuration is done through environment variables:
 
 ### Network Configuration
 
-qSticky can be configured for various networking scenarios:
-
-#### Using Gluetun's Network (Recommended)
-When using `network_mode: "service:gluetun"`, all containers share Gluetun's network stack:
+When using `network_mode: "service:gluetun"`, all containers share Gluetun's network stack. This is most likely how you have your stack configured to tunnel qBitorrent via Gluetun, and so qSticky can be deployed as so:
 
 ```yaml
 services:
@@ -131,60 +130,6 @@ services:
       - QSTICKY_QBITTORRENT_HOST=localhost  # Using localhost works here
       - QSTICKY_QBITTORRENT_PORT=8080
 ```
-
-In this setup:
-- Use `localhost` as qBittorrent host
-- All containers share the same network namespace
-- All traffic goes through VPN
-- No additional network configuration needed
-
-#### Using Separate Networks
-If not using `network_mode: "service:gluetun"`, but still running on the same Docker host:
-
-```yaml
-services:
-  qbittorrent:
-    container_name: qbittorrent
-    networks:
-      - vpn_network
-    # ... other config ...
-
-  qsticky:
-    networks:
-      - vpn_network
-    environment:
-      - QSTICKY_QBITTORRENT_HOST=qbittorrent  # Use container name as hostname
-      - QSTICKY_QBITTORRENT_PORT=8080
-
-networks:
-  vpn_network:
-    name: vpn_network
-```
-
-In this setup:
-- Use the container name or service name as qBittorrent host
-- Containers must be on the same Docker network
-- Configure proper network access between containers
-- Consider VPN requirements for your setup
-
-#### Remote Host Setup
-qSticky can also manage a qBittorrent instance running on a different machine:
-
-```yaml
-services:
-  qsticky:
-    environment:
-      - QSTICKY_QBITTORRENT_HOST=qbit.mydomain.com  # Remote hostname or IP
-      - QSTICKY_QBITTORRENT_PORT=8080
-      - QSTICKY_USE_HTTPS=true  # Recommended for remote access
-```
-
-In this setup:
-- Use a hostname or IP address of the remote qBittorrent server
-- Consider enabling HTTPS
-- Make sure qBittorrent's WebUI is accessible from the qSticky host
-
-I'm not entirely sure where this would be necessary if you're tunneling qBittorent via Gluetun but ¯\_(ツ)_/¯.
 
 ### User Permissions
 qSticky can run as any user, which is particularly useful when running with qBittorrent's user permissions. To run as a specific user, use the `user:` directive in your docker-compose file:
