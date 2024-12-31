@@ -1,5 +1,5 @@
 aiohttp==3.11.11
 pydantic==2.10.4
-pydantic-settings==2.7.0
+pydantic-settings==2.7.1
 watchfiles==1.0.3
 typing-extensions==4.12.2
