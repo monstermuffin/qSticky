@@ -1,7 +1,7 @@
 services:
   qsticky:
     image: ghcr.io/monstermuffin/qsticky:latest
-    network_mode: "service:gluetun"
+    network_mode: "container:gluetun"
     environment:
       # qbittorrent settings
       QBITTORRENT_HOST: localhost
@@ -12,7 +12,7 @@ services:
       # gluetun settings
       GLUETUN_AUTH_ENABLED: true
       GLUETUN_AUTH_TYPE: apikey
-      GLUETUN_APIKEY: 'generatethiswithgluetuncommand'
+      GLUETUN_APIKEY: generatethiswithgluetuncommand
       # qSticky settings
       LOG_LEVEL: INFO
     restart: unless-stopped
