@@ -212,6 +212,9 @@ class PortManager:
                     )
                 elif self.settings.gluetun_auth_type == "apikey":
                     headers["X-API-Key"] = self.settings.gluetun_apikey
+                    self.logger.debug(f"Using API key auth with headers: {headers}")
+
+            self.logger.debug(f"Auth enabled: {self.settings.gluetun_auth_enabled}, type: {self.settings.gluetun_auth_type}")
 
             async with self.session.get(
                 f"{self.gluetun_base_url}/v1/openvpn/portforwarded",
