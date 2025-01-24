@@ -5,10 +5,10 @@ services:
     volumes:
       - ./gluetun:/tmp/gluetun:ro         # Read-only access to port file
     environment:
-      - QSTICKY_QBITTORRENT_HOST=localhost
-      - QSTICKY_QBITTORRENT_PORT=8080
-      - QSTICKY_QBITTORRENT_USER=admin    # Match your qBittorrent credentials
-      - QSTICKY_QBITTORRENT_PASS=adminadmin
-      - QSTICKY_LOG_LEVEL=INFO
+      - QBITTORRENT_HOST=localhost
+      - QBITTORRENT_PORT=8080
+      - QBITTORRENT_USER=admin    # Match your qBittorrent credentials
+      - QBITTORRENT_PASS=adminadmin
+      - LOG_LEVEL=INFO
     restart: unless-stopped
     # user: "1000:1000" # Optional: run as same user as qBittorrent if needed

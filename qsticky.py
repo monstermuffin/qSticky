@@ -77,7 +77,7 @@ class Settings(BaseSettings):
     )] = ""
 
     class Config:
-        env_prefix = "QSTICKY_"
+        env_prefix = ""
 
 @dataclass
 class HealthStatus:
