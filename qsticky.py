@@ -18,6 +18,7 @@ from pydantic_settings import BaseSettings
 from typing_extensions import Annotated
 
 class Settings(BaseSettings):
+    # Qbit settings
     qbittorrent_host: Annotated[str, Field(
         description="qBittorrent server hostname"
     )] = "localhost"
@@ -38,17 +39,42 @@ class Settings(BaseSettings):
         description="Use HTTPS for qBittorrent connection"
     )] = False
     
-    port_file_path: Annotated[str, Field(
-        description="Path to Gluetun forwarded port file"
-    )] = "/tmp/gluetun/forwarded_port"
-    
     check_interval: Annotated[int, Field(
-        description="Interval in seconds to check port file if watching fails"
+        description="Interval in seconds between port checks"
     )] = 30
     
     log_level: Annotated[str, Field(
         description="Logging level"
     )] = "INFO"
+
+    # Gluetun control server settings
+    gluetun_host: Annotated[str, Field(
+        description="Gluetun control server hostname"
+    )] = "localhost"
+    
+    gluetun_port: Annotated[int, Field(
+        description="Gluetun control server port"
+    )] = 8000
+    
+    gluetun_auth_enabled: Annotated[bool, Field(
+        description="Enable Gluetun authentication"
+    )] = False
+    
+    gluetun_auth_type: Annotated[str, Field(
+        description="Gluetun authentication type (basic/apikey)"
+    )] = "basic"
+    
+    gluetun_username: Annotated[str, Field(
+        description="Gluetun basic auth username"
+    )] = ""
+    
+    gluetun_password: Annotated[str, Field(
+        description="Gluetun basic auth password"
+    )] = ""
+    
+    gluetun_apikey: Annotated[str, Field(
+        description="Gluetun API key"
+    )] = ""
 
     class Config:
         env_prefix = "QSTICKY_"
@@ -69,6 +95,7 @@ class PortManager:
         self.current_port: Optional[int] = None
         self.session: Optional[aiohttp.ClientSession] = None
         self.base_url = f"{'https' if self.settings.use_https else 'http'}://{self.settings.qbittorrent_host}:{self.settings.qbittorrent_port}"
+        self.gluetun_base_url = f"http://{self.settings.gluetun_host}:{self.settings.gluetun_port}"
         self.start_time = datetime.now()
         self.health_status = HealthStatus(healthy=True, last_check=datetime.now())
         self.shutdown_event = asyncio.Event()
@@ -171,21 +198,41 @@ class PortManager:
             self.logger.error(f"Port update error: {str(e)}")
             return False
 
-    def _read_port_file(self) -> Optional[int]:
+    async def _get_forwarded_port(self) -> Optional[int]:
+        await self._init_session()
         try:
-            if os.path.exists(self.settings.port_file_path):
-                with open(self.settings.port_file_path, 'r') as f:
-                    port = int(f.read().strip())
-                    self.logger.debug(f"Read port {port} from file")
+            headers = {}
+            auth = None
+
+            if self.settings.gluetun_auth_enabled:
+                if self.settings.gluetun_auth_type == "basic":
+                    auth = aiohttp.BasicAuth(
+                        self.settings.gluetun_username, 
+                        self.settings.gluetun_password
+                    )
+                elif self.settings.gluetun_auth_type == "apikey":
+                    headers["X-API-Key"] = self.settings.gluetun_apikey
+
+            async with self.session.get(
+                f"{self.gluetun_base_url}/v1/openvpn/portforwarded",
+                headers=headers,
+                auth=auth,
+                timeout=ClientTimeout(total=10)
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    port = data.get("port")
+                    self.logger.debug(f"Retrieved forwarded port: {port}")
                     return port
-            self.logger.warning(f"Port file not found at {self.settings.port_file_path}")
-            return None
+                else:
+                    self.logger.error(f"Failed to get port: HTTP {response.status}")
+                    return None
         except Exception as e:
-            self.logger.error(f"Error reading port file: {str(e)}")
+            self.logger.error(f"Error getting forwarded port: {str(e)}")
             return None
 
     async def handle_port_change(self) -> None:
-        new_port = self._read_port_file()
+        new_port = await self._get_forwarded_port()
         if not new_port:
             return
 
@@ -252,26 +299,20 @@ class PortManager:
                 self.health_status.last_error = str(e)
                 await self.update_health_file()
 
-    async def watch_port_file(self) -> None:
+    async def watch_port(self) -> None:
         self.logger.info("Starting qSticky port manager...")
         
         await self.handle_port_change()
 
-        try:
-            async for changes in watchfiles.awatch(
-                os.path.dirname(self.settings.port_file_path)
-            ):
-                if any(self.settings.port_file_path in change for change in changes):
-                    await self.handle_port_change()
-        except Exception as e:
-            self.logger.error(f"Watch error: {str(e)}")
-            return await self.fallback_watch()
-
-    async def fallback_watch(self) -> None:
-        self.logger.info("Falling back to interval-based checking...")
         while not self.shutdown_event.is_set():
-            await self.handle_port_change()
-            await asyncio.sleep(self.settings.check_interval)
+            try:
+                await self.handle_port_change()
+                await asyncio.sleep(self.settings.check_interval)
+            except Exception as e:
+                self.logger.error(f"Watch error: {str(e)}")
+                self.health_status.healthy = False
+                self.health_status.last_error = str(e)
+                await asyncio.sleep(self.settings.check_interval)
 
     async def cleanup(self) -> None:
         if self.session:
@@ -303,7 +344,7 @@ async def main() -> None:
     try:
         manager.setup_signal_handlers()
         health_check_task = asyncio.create_task(manager.health_check_task())
-        watch_task = asyncio.create_task(manager.watch_port_file())
+        watch_task = asyncio.create_task(manager.watch_port())
         await manager.shutdown_event.wait()
         health_check_task.cancel()
         watch_task.cancel()
