@@ -12,7 +12,7 @@ services:
       # gluetun settings
       GLUETUN_AUTH_ENABLED: true
       GLUETUN_AUTH_TYPE: apikey
-      GLUETUN_APIKEY: generatethiswithgluetuncommand
+      GLUETUN_APIKEY: put_api_key_here
       # qSticky settings
       LOG_LEVEL: INFO
     restart: unless-stopped
