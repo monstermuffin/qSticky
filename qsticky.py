@@ -62,7 +62,7 @@ class Settings(BaseSettings):
     
     gluetun_auth_type: Annotated[str, Field(
         description="Gluetun authentication type (basic/apikey)"
-    )] = "basic"
+    )] = "apikey"
     
     gluetun_username: Annotated[str, Field(
         description="Gluetun basic auth username"
