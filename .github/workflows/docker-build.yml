@@ -3,9 +3,9 @@ name: Build and Push Multi-Arch Image
 on:
   workflow_dispatch:
   push:
-    branches: [ main ]
+    branches: [ main, dev ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, dev ]
 
 env:
   REGISTRY: ghcr.io
@@ -18,7 +18,6 @@ jobs:
     permissions:
       packages: write
       contents: read
-      
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -30,6 +29,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Login to GitHub Container Registry
+        if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -42,14 +42,20 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            # Tag as 'latest' on the default branch (usually 'main')
+            type=raw,value=latest,enable={{ is_default_branch }}
+            # Tag as 'dev' on the 'dev' branch
+            type=raw,value=dev,enable={{ github.ref == 'refs/heads/dev' }}
+            # Tag with short SHA for all builds
             type=sha,format=short
+            # Tag with PR number for pull requests
             type=ref,event=pr
+            # Semantic versioning tags
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=semver,pattern={{major}}
 
-      - name: Build and push
+      - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
           context: .
