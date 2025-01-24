@@ -45,7 +45,7 @@ jobs:
             # Tag as 'latest' on the default branch (usually 'main')
             type=raw,value=latest,enable={{ is_default_branch }}
             # Tag as 'dev' on the 'dev' branch
-            type=raw,value=dev,enable={{ github.ref == 'refs/heads/dev' }}
+            type=raw,value=dev,enable={{ eq github.ref "refs/heads/dev" }}
             # Tag with short SHA for all builds
             type=sha,format=short
             # Tag with PR number for pull requests
@@ -65,3 +65,4 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
