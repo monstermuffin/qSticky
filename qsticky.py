@@ -222,11 +222,17 @@ class PortManager:
                 auth=auth,
                 timeout=ClientTimeout(total=10)
             ) as response:
+                content = await response.text()
+                self.logger.debug(f"Response status: {response.status}, content: {content}, content-type: {response.headers.get('content-type')}")
                 if response.status == 200:
-                    data = await response.json()
-                    port = data.get("port")
-                    self.logger.debug(f"Retrieved forwarded port: {port}")
-                    return port
+                    try:
+                        data = json.loads(content)
+                        port = data.get("port")
+                        self.logger.debug(f"Retrieved forwarded port: {port}")
+                        return port
+                    except json.JSONDecodeError as e:
+                        self.logger.error(f"Failed to parse JSON response: {e}")
+                        return None
                 else:
                     self.logger.error(f"Failed to get port: HTTP {response.status}")
                     return None
