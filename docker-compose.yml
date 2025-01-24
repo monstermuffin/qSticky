@@ -4,15 +4,16 @@ services:
     network_mode: "service:gluetun"
     environment:
       # qbittorrent settings
-      - QBITTORRENT_HOST=localhost
-      - QBITTORRENT_PORT=8080
-      - QBITTORRENT_USER=admin
-      - QBITTORRENT_PASS=adminadmin
+      QBITTORRENT_HOST: localhost
+      QBITTORRENT_HTTPS: false
+      QBITTORRENT_PORT: 8080
+      QBITTORRENT_USER: admin
+      QBITTORRENT_PASS: adminadmin
       # gluetun settings
-      - GLUETUN_AUTH_ENABLED=true
-      - GLUETUN_AUTH_TYPE=apikey
-      - GLUETUN_APIKEY=generatethiswithgluetuncommand
+      GLUETUN_AUTH_ENABLED: true
+      GLUETUN_AUTH_TYPE: apikey
+      GLUETUN_APIKEY: 'generatethiswithgluetuncommand'
       # qSticky settings
-      - LOG_LEVEL=INFO
+      LOG_LEVEL: INFO
     restart: unless-stopped
     # user: "1000:1000" # Optional: run as same user as qBittorrent if needed

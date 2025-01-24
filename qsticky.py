@@ -35,7 +35,7 @@ class Settings(BaseSettings):
         description="qBittorrent password"
     )] = "adminadmin"
     
-    use_https: Annotated[bool, Field(
+    qbittorrent_https: Annotated[bool, Field(
         description="Use HTTPS for qBittorrent connection"
     )] = False
     
