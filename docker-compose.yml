@@ -1,14 +1,18 @@
 services:
   qsticky:
     image: ghcr.io/monstermuffin/qsticky:latest
-    network_mode: "service:gluetun"       # Use Gluetun network
-    volumes:
-      - ./gluetun:/tmp/gluetun:ro         # Read-only access to port file
+    network_mode: "service:gluetun"
     environment:
+      # qbittorrent settings
       - QBITTORRENT_HOST=localhost
       - QBITTORRENT_PORT=8080
-      - QBITTORRENT_USER=admin    # Match your qBittorrent credentials
+      - QBITTORRENT_USER=admin
       - QBITTORRENT_PASS=adminadmin
+      # gluetun settings
+      - GLUETUN_AUTH_ENABLED=true
+      - GLUETUN_AUTH_TYPE=apikey
+      - GLUETUN_APIKEY=generatethiswithgluetuncommand
+      # qSticky settings
       - LOG_LEVEL=INFO
     restart: unless-stopped
     # user: "1000:1000" # Optional: run as same user as qBittorrent if needed
