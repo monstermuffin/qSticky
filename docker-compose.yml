@@ -10,7 +10,6 @@ services:
       QBITTORRENT_USER: admin
       QBITTORRENT_PASS: adminadmin
       # gluetun settings
-      GLUETUN_AUTH_ENABLED: true
       GLUETUN_AUTH_TYPE: apikey
       GLUETUN_APIKEY: put_api_key_here
       # qSticky settings

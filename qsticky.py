@@ -56,10 +56,6 @@ class Settings(BaseSettings):
         description="Gluetun control server port"
     )] = 8000
     
-    gluetun_auth_enabled: Annotated[bool, Field(
-        description="Enable Gluetun authentication"
-    )] = False
-    
     gluetun_auth_type: Annotated[str, Field(
         description="Gluetun authentication type (basic/apikey)"
     )] = "apikey"
@@ -204,17 +200,19 @@ class PortManager:
             headers = {}
             auth = None
 
-            if self.settings.gluetun_auth_enabled:
-                if self.settings.gluetun_auth_type == "basic":
-                    auth = aiohttp.BasicAuth(
-                        self.settings.gluetun_username, 
-                        self.settings.gluetun_password
-                    )
-                elif self.settings.gluetun_auth_type == "apikey":
-                    headers["X-API-Key"] = self.settings.gluetun_apikey
-                    self.logger.debug(f"Using API key auth with headers: {headers}")
+            if self.settings.gluetun_auth_type == "basic":
+                auth = aiohttp.BasicAuth(
+                    self.settings.gluetun_username, 
+                    self.settings.gluetun_password
+                )
+            elif self.settings.gluetun_auth_type == "apikey":
+                headers["X-API-Key"] = self.settings.gluetun_apikey
+                self.logger.debug(f"Using API key auth with headers: {headers}")
+            else:
+                self.logger.error("Invalid auth type specified")
+                return None
 
-            self.logger.debug(f"Auth enabled: {self.settings.gluetun_auth_enabled}, type: {self.settings.gluetun_auth_type}")
+            self.logger.debug(f"Using auth type: {self.settings.gluetun_auth_type}")
 
             async with self.session.get(
                 f"{self.gluetun_base_url}/v1/openvpn/portforwarded",

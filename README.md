@@ -53,7 +53,10 @@ graph TD;
 > qSticky only supports [whatever gluetun natively supports for automatic port forwarding.](https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/vpn-port-forwarding.md#native-integrations) At time of writing, this is PIA and ProtonVPN.
 
 ## 🔑 Authentication Setup
-qSticky requires access to Gluetun's control server API to monitor port forwarding. For security, you should enable authentication on Gluetun's control server. Gluetun has deprecation notices for unauthenticated endpoints, so this **will** be required if it's not already.
+qSticky requires access to Gluetun's control server API to monitor port forwarding. You need to configure this one of two ways:
+
+> [!IMPORTANT]  
+> Authentication is required for qSticky to function. No unauthenticated access is supported, as Gluetun is deprecating unauthenticated endpoints.
 
 ### Create Authentication Config
 Create a `config.toml` file somewhere to be mapped into gluetun:
