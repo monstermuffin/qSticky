@@ -94,7 +94,7 @@ class PortManager:
         self.logger = self._setup_logger()
         self.current_port: Optional[int] = None
         self.session: Optional[aiohttp.ClientSession] = None
-        self.base_url = f"{'https' if self.settings.use_https else 'http'}://{self.settings.qbittorrent_host}:{self.settings.qbittorrent_port}"
+        self.base_url = f"{'https' if self.settings.qbittorrent_https else 'http'}://{self.settings.qbittorrent_host}:{self.settings.qbittorrent_port}"
         self.gluetun_base_url = f"http://{self.settings.gluetun_host}:{self.settings.gluetun_port}"
         self.start_time = datetime.now()
         self.health_status = HealthStatus(healthy=True, last_check=datetime.now())
