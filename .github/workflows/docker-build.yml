@@ -42,18 +42,13 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            # Tag as 'latest' on the default branch (usually 'main')
-            type=raw,value=latest,enable={{ is_default_branch }}
-            # Tag as 'dev' on the 'dev' branch
-            type=raw,value=dev,enable={{ eq github.ref "refs/heads/dev" }}
-            # Tag with short SHA for all builds
-            type=sha,format=short
-            # Tag with PR number for pull requests
-            type=ref,event=pr
-            # Semantic versioning tags
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+              type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
+              type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
+              type=sha,format=short
+              type=ref,event=pr
+              type=semver,pattern={{version}}
+              type=semver,pattern={{major}}.{{minor}}
+              type=semver,pattern={{major}}
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
