@@ -5,14 +5,14 @@ qSticky is an automated port forwarding manager for Gluetun and qBittorrent. It 
 
 ![](img/SCR-20241218-lfff.png)
 
-## Features
+## ✨ Features
 - 🔄 Automatic port synchronization
 - 👀 Real-time file watching with fallback polling
 - 🔒 Secure HTTPS support
 - 🐳 Docker deployment
 - 📝 Logging
 
-## How it Works
+## 🛠️ How it Works
 qSticky monitors Gluetun's port forwarding through its [control server API](https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/control-server.md#openvpn-and-wireguard) and updates qBittorrent's connection settings as needed.
 
 1. **Port Monitoring**
@@ -47,7 +47,7 @@ graph TD;
     qSticky-->|Writes|Health;
 ```
 
-# Quick Start
+## 🚀 Quick Start
 
 > [!IMPORTANT]  
 > qSticky only supports [whatever gluetun natively supports for automatic port forwarding.](https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/vpn-port-forwarding.md#native-integrations) At time of writing, this is PIA and ProtonVPN.
@@ -106,7 +106,7 @@ services:
 
 For complete details on Gluetun's control server authentication, check out the [official Gluetun documentation.](https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/control-server.md#openvpn-and-wireguard)
 
-## Gluetun Setup
+## 🐋 Gluetun Setup
 Gluetun setup is simple and if you're already using it you may just need to add some simple env vars:
 
 To set up port forwarding:
@@ -131,7 +131,7 @@ services:
 > [!NOTE]  
 > Since we are using gluetun's own container network, port `8000` does not need to be explicitly mapped in docker. If you wish to use the API outside og gluetun's container network, you should map the port.
 
-## qSticky Setup
+## 🔄 qSticky Setup
 > [!TIP]
 > A full list of environment variables are listed and explained below.
 
@@ -155,7 +155,7 @@ services:
       GLUETUN_APIKEY: put_api_key_here
 ```
 
-## qbittorrent Setup
+## 🎮 qbittorrent Setup
 
 Qbittorrent can be deployed like the following example. There will be a lot of other containers available for qbittorrent and what you use is up to you, below is an example from [lsio.io](https://www.linuxserver.io/) as they are popular.
 ```yaml
@@ -177,7 +177,7 @@ services:
       - gluetun
 ```
 
-## Full Stack Setup
+## 🧱 Full Stack Setup
 Here is an example stack for deploying Gluetun, qBitorrent and qSticky:
 
 > [!NOTE]  
@@ -259,7 +259,7 @@ services:
       GLUETUN_PASSWORD: secure_password
 ```
 
-# Configuration
+# ⚡ Configuration
 All configuration is done through environment variables:
 
 | Environment Variable | Description | Default |
@@ -279,7 +279,7 @@ All configuration is done through environment variables:
 | GLUETUN_PASSWORD | Gluetun basic auth password | "" |
 | GLUETUN_APIKEY | Gluetun API key | "" |
 
-## qBittorrent Credentials: First-Time Setup
+## 🐣 qBittorrent Credentials: First-Time Setup
 Setting up qSticky with qBittorrent can present a small chicken-and-egg scenario with credentials. Here are your options:
 
 * Option 1: Use Defaults
@@ -294,7 +294,17 @@ Setting up qSticky with qBittorrent can present a small chicken-and-egg scenario
 > [!NOTE]  
 > Either approach works! Just ensure qSticky's credentials match qBittorrent's final configuration.
 
-# Checks
+## 👤 User Permissions
+qSticky can run as any user, which is particularly useful when running with qBittorrent's user permissions. To run as a specific user, use the `user:` directive in your docker-compose file:
+
+```yaml
+services:
+  qSticky:
+    image: ghcr.io/monstermuffin/qSticky:latest
+    user: "your-qbittorrent-user"  # Optional: Run as specific user
+```
+
+# 🔍 Checks
 To check qSticky is working:
 
 - Check qSticky logs with `docker logs qSticky`
@@ -320,17 +330,7 @@ When successful, the logs will look something like the following:
 2025-01-24 20:08:13,189 - qSticky - INFO - Successfully updated port to 51218
 ```
 
-# User Permissions
-qSticky can run as any user, which is particularly useful when running with qBittorrent's user permissions. To run as a specific user, use the `user:` directive in your docker-compose file:
-
-```yaml
-services:
-  qSticky:
-    image: ghcr.io/monstermuffin/qSticky:latest
-    user: "your-qbittorrent-user"  # Optional: Run as specific user
-```
-
-# Health Checks
+# 💓 Health Checks
 qSticky includes Docker health checks. The health status is written to a file at `/app/health/status.json`. This file is managed internally by the container - you don't need to mount or manage it. Health status includes:
   - Overall health status
   - Uptime
@@ -345,7 +345,7 @@ The Docker container will be marked as unhealthy if:
   - Port updates fail repeatedly
   - Other critical errors occur
 
-# Development
+# 🧪 Development
 
 ## Prerequisites
 - Python 3.11+
