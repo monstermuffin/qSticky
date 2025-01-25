@@ -299,8 +299,10 @@ class PortManager:
 
     async def get_health(self) -> Dict[str, Any]:
         now = datetime.now()
+        api_connected = await self.check_connectivity()
         return {
-            "healthy": self.health_status.healthy,
+            "healthy": self.health_status.healthy and api_connected,
+            "api_connected": api_connected,
             "uptime": str(now - self.start_time),
             "last_check": self.health_status.last_check.isoformat(),
             "last_port_change": self.health_status.last_port_change.isoformat() if self.health_status.last_port_change else None,
@@ -308,6 +310,16 @@ class PortManager:
             "last_error": self.health_status.last_error,
             "timestamp": now.isoformat()
         }
+
+    async def check_connectivity(self) -> bool:
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    f"{self.gluetun_base_url}/v1/openvpn/status"
+                ) as response:
+                    return response.status == 200
+        except:
+            return False
 
     async def update_health_file(self):
         health_data = await self.get_health()
