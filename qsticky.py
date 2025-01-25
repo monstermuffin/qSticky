@@ -1,18 +1,15 @@
 #!/usr/bin/env python3
 
 import os
-import time
 import json
 import logging
 import aiohttp
 import asyncio
 import signal
-import watchfiles
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from aiohttp import ClientTimeout
-from contextlib import asynccontextmanager
 from pydantic import Field
 from pydantic_settings import BaseSettings
 from typing_extensions import Annotated
@@ -95,10 +92,10 @@ class PortManager:
         self.start_time = datetime.now()
         self.health_status = HealthStatus(healthy=True, last_check=datetime.now())
         self.shutdown_event = asyncio.Event()
-        self.retry_delays = [1, 2, 4, 8, 16, 32, 60]
         self.health_file = os.getenv('HEALTH_FILE', '/tmp/health_status.json')
         self.last_login_failed = False
         self.first_run = True
+        self.last_known_port = None
 
     def _setup_logger(self) -> logging.Logger:
         logger = logging.getLogger("qsticky")
@@ -112,6 +109,7 @@ class PortManager:
         return logger
 
     async def get_current_qbit_port(self) -> Optional[int]:
+        self.logger.debug("Retrieving current qBittorrent port")
         try:
             async with self.session.get(
                 f"{self.base_url}/api/v2/app/preferences",
@@ -119,7 +117,9 @@ class PortManager:
             ) as response:
                 if response.status == 200:
                     prefs = await response.json()
-                    return prefs.get('listen_port')
+                    port = prefs.get('listen_port')
+                    self.logger.debug(f"Current qBittorrent port: {port}")
+                    return port
                 else:
                     self.logger.error(f"Failed to get preferences: {response.status}")
                     return None
@@ -129,6 +129,7 @@ class PortManager:
 
     async def _init_session(self) -> None:
         if self.session is None:
+            self.logger.debug("Initializing new aiohttp session")
             timeout = ClientTimeout(
                 total=30,
                 connect=10,
@@ -136,27 +137,10 @@ class PortManager:
                 sock_read=10
             )
             self.session = aiohttp.ClientSession(timeout=timeout)
-            self.logger.debug("Initialized new aiohttp session with timeouts")
-
-    @asynccontextmanager
-    async def _retrying_request(self):
-        for delay in self.retry_delays:
-            try:
-                yield
-                break
-            except aiohttp.ClientError as e:
-                self.logger.warning(f"Request failed, retrying in {delay}s: {str(e)}")
-                if delay != self.retry_delays[-1]:
-                    await asyncio.sleep(delay)
-        else:
-            self.logger.error("All retry attempts failed")
-            self.health_status.healthy = False
-            self.health_status.last_error = "Max retries exceeded"
-            raise
+            self.logger.debug("Session initialized with timeouts")
 
     async def _login(self) -> bool:
-        async with self._retrying_request():
-            self.logger.debug("Attempting to login to qBittorrent")
+        try:
             async with self.session.post(
                 f"{self.base_url}/api/v2/auth/login",
                 data={
@@ -176,17 +160,29 @@ class PortManager:
                     self.health_status.last_error = f"Login failed: {response.status}"
                     self.last_login_failed = True
                     return False
+        except Exception as e:
+            self.logger.error(f"Login error: {str(e)}")
+            return False
 
     async def _update_port(self, new_port: int) -> bool:
+        if not isinstance(new_port, int) or new_port < 1024 or new_port > 65535:
+            self.logger.error(f"Invalid port value: {new_port}")
+            return False
+            
         try:
-            self.logger.debug(f"Attempting to update port to {new_port}")
             async with self.session.post(
                 f"{self.base_url}/api/v2/app/setPreferences",
                 data={'json': f'{{"listen_port":{new_port}}}'}
             ) as response:
                 if response.status == 200:
-                    self.current_port = new_port
-                    return True
+                    verified_port = await self.get_current_qbit_port()
+                    if verified_port == new_port:
+                        self.current_port = new_port
+                        self.health_status.last_port_change = datetime.now()
+                        return True
+                    else:
+                        self.logger.error(f"Port verification failed: expected {new_port}, got {verified_port}")
+                        return False
                 else:
                     self.logger.error(f"Failed to update port: {response.status}")
                     return False
@@ -195,6 +191,7 @@ class PortManager:
             return False
 
     async def _get_forwarded_port(self) -> Optional[int]:
+        self.logger.debug("Attempting to get forwarded port from Gluetun")
         await self._init_session()
         try:
             headers = {}
@@ -205,14 +202,13 @@ class PortManager:
                     self.settings.gluetun_username, 
                     self.settings.gluetun_password
                 )
+                self.logger.debug("Using basic auth")
             elif self.settings.gluetun_auth_type == "apikey":
                 headers["X-API-Key"] = self.settings.gluetun_apikey
-                self.logger.debug(f"Using API key auth with headers: {headers}")
+                self.logger.debug("Using API key auth")
             else:
                 self.logger.error("Invalid auth type specified")
                 return None
-
-            self.logger.debug(f"Using auth type: {self.settings.gluetun_auth_type}")
 
             async with self.session.get(
                 f"{self.gluetun_base_url}/v1/openvpn/portforwarded",
@@ -221,7 +217,7 @@ class PortManager:
                 timeout=ClientTimeout(total=10)
             ) as response:
                 content = await response.text()
-                self.logger.debug(f"Response status: {response.status}, content: {content}, content-type: {response.headers.get('content-type')}")
+                self.logger.debug(f"Gluetun API response status: {response.status}, content: {content}")
                 if response.status == 200:
                     try:
                         data = json.loads(content)
@@ -239,8 +235,10 @@ class PortManager:
             return None
 
     async def handle_port_change(self) -> None:
+        self.logger.debug("Starting port change check cycle")
         new_port = await self._get_forwarded_port()
         if not new_port:
+            self.logger.debug("No forwarded port available")
             return
 
         await self._init_session()
@@ -248,6 +246,11 @@ class PortManager:
             return
 
         current_qbit_port = await self.get_current_qbit_port()
+        if current_qbit_port is None:
+            self.logger.error("Failed to get current qBittorrent port")
+            return
+            
+        self.logger.debug(f"Port comparison - Gluetun: {new_port}, qBittorrent: {current_qbit_port}")
         
         if current_qbit_port != new_port:
             self.logger.info(f"Port change needed: {current_qbit_port} -> {new_port}")
@@ -256,8 +259,9 @@ class PortManager:
                 verified_port = await self.get_current_qbit_port()
                 if verified_port == new_port:
                     self.logger.info(f"Successfully updated port to {new_port}")
+                    self.current_port = new_port
                 else:
-                    self.logger.error("Port change verification failed")
+                    self.logger.error(f"Port change verification failed - expected {new_port}, got {verified_port}")
                     self.health_status.healthy = False
                     self.health_status.last_error = "Port change verification failed"
         else:
@@ -310,16 +314,14 @@ class PortManager:
         self.logger.info("Starting qSticky port manager...")
         
         await self.handle_port_change()
-
         while not self.shutdown_event.is_set():
             try:
-                await self.handle_port_change()
                 await asyncio.sleep(self.settings.check_interval)
+                await self.handle_port_change()
             except Exception as e:
                 self.logger.error(f"Watch error: {str(e)}")
                 self.health_status.healthy = False
                 self.health_status.last_error = str(e)
-                await asyncio.sleep(self.settings.check_interval)
 
     async def cleanup(self) -> None:
         if self.session:
@@ -350,17 +352,14 @@ async def main() -> None:
     manager = PortManager()
     try:
         manager.setup_signal_handlers()
-        health_check_task = asyncio.create_task(manager.health_check_task())
-        watch_task = asyncio.create_task(manager.watch_port())
+        tasks = [
+            asyncio.create_task(manager.health_check_task()),
+            asyncio.create_task(manager.watch_port())
+        ]
         await manager.shutdown_event.wait()
-        health_check_task.cancel()
-        watch_task.cancel()
-        try:
-            await asyncio.gather(health_check_task, watch_task)
-        except asyncio.CancelledError:
-            pass
-    except Exception as e:
-        manager.logger.error(f"Unexpected error: {str(e)}")
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
     finally:
         await manager.cleanup()
 
