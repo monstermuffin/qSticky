@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import os
 import json
 import logging
@@ -192,56 +190,79 @@ class PortManager:
 
     async def _get_forwarded_port(self) -> Optional[int]:
         self.logger.debug("Attempting to get forwarded port from Gluetun")
-        await self._init_session()
-        try:
-            headers = {}
-            auth = None
+        
+        max_attempts = 3
+        base_delay = 2
+        
+        for attempt in range(max_attempts):
+            try:
+                headers = {}
+                auth = None
 
-            if self.settings.gluetun_auth_type == "basic":
-                auth = aiohttp.BasicAuth(
-                    self.settings.gluetun_username, 
-                    self.settings.gluetun_password
-                )
-                self.logger.debug("Using basic auth")
-            elif self.settings.gluetun_auth_type == "apikey":
-                headers["X-API-Key"] = self.settings.gluetun_apikey
-                self.logger.debug("Using API key auth")
-            else:
-                self.logger.error("Invalid auth type specified")
-                return None
-
-            async with self.session.get(
-                f"{self.gluetun_base_url}/v1/openvpn/portforwarded",
-                headers=headers,
-                auth=auth,
-                timeout=ClientTimeout(total=10)
-            ) as response:
-                content = await response.text()
-                self.logger.debug(f"Gluetun API response status: {response.status}, content: {content}")
-                if response.status == 200:
-                    try:
-                        data = json.loads(content)
-                        port = data.get("port")
-                        self.logger.debug(f"Retrieved forwarded port: {port}")
-                        return port
-                    except json.JSONDecodeError as e:
-                        self.logger.error(f"Failed to parse JSON response: {e}")
-                        return None
+                if self.settings.gluetun_auth_type == "basic":
+                    auth = aiohttp.BasicAuth(
+                        self.settings.gluetun_username, 
+                        self.settings.gluetun_password
+                    )
+                    self.logger.debug("Using basic auth")
+                elif self.settings.gluetun_auth_type == "apikey":
+                    headers["X-API-Key"] = self.settings.gluetun_apikey
+                    self.logger.debug("Using API key auth")
                 else:
-                    self.logger.error(f"Failed to get port: HTTP {response.status}")
+                    self.logger.error("Invalid auth type specified")
                     return None
-        except Exception as e:
-            self.logger.error(f"Error getting forwarded port: {str(e)}")
-            return None
+
+                timeout = ClientTimeout(total=10)
+                async with aiohttp.ClientSession(timeout=timeout) as session:
+                    async with session.get(
+                        f"{self.gluetun_base_url}/v1/openvpn/portforwarded",
+                        headers=headers,
+                        auth=auth
+                    ) as response:
+                        content = await response.text()
+                        self.logger.debug(f"Gluetun API response status: {response.status}, content: {content}")
+                        if response.status == 200:
+                            try:
+                                data = json.loads(content)
+                                port = data.get("port")
+                                self.logger.debug(f"Retrieved forwarded port: {port}")
+                                return port
+                            except json.JSONDecodeError as e:
+                                self.logger.error(f"Failed to parse JSON response: {e}")
+                                return None
+                        else:
+                            self.logger.error(f"Failed to get port: HTTP {response.status}")
+                            return None
+            except Exception as e:
+                delay = base_delay * (attempt + 1)
+                self.logger.warning(f"Connection attempt {attempt + 1} failed: {str(e)}, retrying in {delay}s...")
+                await asyncio.sleep(delay)
+            
+        self.logger.error("All connection attempts to Gluetun failed")
+        return None
 
     async def handle_port_change(self) -> None:
         self.logger.debug("Starting port change check cycle")
+        
+        if self.session and not self.session.closed:
+            await self.session.close()
+            self.logger.debug("Closed existing session")
+            
+        self.logger.debug("Initializing new aiohttp session")
+        timeout = ClientTimeout(
+            total=30,
+            connect=10,
+            sock_connect=10,
+            sock_read=10
+        )
+        self.session = aiohttp.ClientSession(timeout=timeout)
+        self.logger.debug("Session initialized with timeouts")
+        
         new_port = await self._get_forwarded_port()
         if not new_port:
             self.logger.debug("No forwarded port available")
             return
 
-        await self._init_session()
         if not await self._login():
             return
 
@@ -271,6 +292,10 @@ class PortManager:
                 self.logger.debug(f"Port {new_port} already set correctly")
         
         self.first_run = False
+
+        if self.session and not self.session.closed:
+            await self.session.close()
+            self.logger.debug("Closed session at end of cycle")
 
     async def get_health(self) -> Dict[str, Any]:
         now = datetime.now()
@@ -313,15 +338,15 @@ class PortManager:
     async def watch_port(self) -> None:
         self.logger.info("Starting qSticky port manager...")
         
-        await self.handle_port_change()
         while not self.shutdown_event.is_set():
             try:
-                await asyncio.sleep(self.settings.check_interval)
                 await self.handle_port_change()
+                await asyncio.sleep(self.settings.check_interval)
             except Exception as e:
                 self.logger.error(f"Watch error: {str(e)}")
                 self.health_status.healthy = False
                 self.health_status.last_error = str(e)
+                await asyncio.sleep(5)
 
     async def cleanup(self) -> None:
         if self.session:
