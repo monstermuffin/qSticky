@@ -57,7 +57,10 @@ Create a `config.toml` file somewhere to be mapped into gluetun:
 ```toml
 [[roles]]
 name = "qSticky"
-routes = ["GET /v1/openvpn/portforwarded"]
+routes = [
+    "GET /v1/openvpn/portforwarded",
+    "GET /v1/openvpn/status"
+]
 auth = "apikey"
 apikey = "your_api_key_here"
 ```
@@ -66,11 +69,17 @@ Or if you prefer basic auth:
 ```toml
 [[roles]]
 name = "qSticky"
-routes = ["GET /v1/openvpn/portforwarded"]
+routes = [
+    "GET /v1/openvpn/portforwarded",
+    "GET /v1/openvpn/status"
+]
 auth = "basic"
 username = "myusername"
 password = "mypassword"
 ```
+> [!NOTE]
+>`/v1/openvpn/portforwarded` is required for the dynamic port mapping, and `/v1/openvpn/status` is required for gluetun's health status.
+
 
 ### Volume mount
 Mount the config in your docker-compose.yml:
