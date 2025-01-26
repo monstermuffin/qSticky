@@ -283,13 +283,13 @@ All configuration is done through environment variables:
 | QBITTORRENT_PASS | qBittorrent password | adminadmin |
 | QBITTORRENT_HTTPS | Use HTTPS for qBittorrent connection | false |
 | CHECK_INTERVAL | API check interval in seconds | 30 |
-| LOG_LEVEL | Logging level (DEBUG, INFO) | INFO |
+| LOG_LEVEL | Logging level (DEBUG, INFO, ERROR, WARNING) | INFO |
 | GLUETUN_HOST | Gluetun control server hostname | gluetun |
 | GLUETUN_PORT | Gluetun control server port | 8000 |
 | GLUETUN_AUTH_TYPE | Gluetun authentication type (basic/apikey) | apikey |
-| GLUETUN_USERNAME | Gluetun basic auth username | \"\" |
-| GLUETUN_PASSWORD | Gluetun basic auth password | \"\" |
-| GLUETUN_APIKEY | Gluetun API key | \"\" |
+| GLUETUN_USERNAME | Gluetun basic auth username | "" |
+| GLUETUN_PASSWORD | Gluetun basic auth password | "" |
+| GLUETUN_APIKEY | Gluetun API key | "" |
 
 # 🔍 Verification
 To verify qSticky is working:
