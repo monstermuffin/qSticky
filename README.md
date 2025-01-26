@@ -137,7 +137,7 @@ services:
 ```
 
 > [!NOTE]  
-> Since we are using docker networking network, port `8000` does not need to be explicitly mapped in docker. If you wish to use the API outside of the docker network, you should map the port.
+> Since we are using docker internal networking, port `8000` does not need to be explicitly mapped in docker. If you wish to use the API outside of the docker network, you should map the port.
 
 ## 🔄 qSticky Setup
 > [!TIP]
