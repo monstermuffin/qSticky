@@ -163,7 +163,7 @@ services:
       # qSticky settings
       LOG_LEVEL: INFO
     healthcheck:
-      test: [\"CMD\", \"python3\", \"-c\", \"import json; exit(0 if json.load(open('/app/health/status.json'))['healthy'] else 1)\"]
+      test: ["CMD", "python3", "-c", "import json; exit(0 if json.load(open('/app/health/status.json'))['healthy'] else 1)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -189,9 +189,17 @@ services:
       - ./qbittorrent/config:/config
       - ./downloads:/downloads
     restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf https://api.ipify.org || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     depends_on:
       - gluetun
 ```
+
+> [!NOTE]
+> I use the above `healthcheck` to ensure qbittorrent is working. If that check fails, it means qbittorrent can't get out of gluetun's network and marks the container as unhealthy.
 
 ## 🧱 Full Stack Example
 Here is a complete example stack for deploying Gluetun, qBittorrent and qSticky:
@@ -232,12 +240,10 @@ services:
       - ./qbittorrent/config:/config
       - ./downloads:/downloads
     healthcheck:
-      test: [\"CMD-SHELL\", \"curl -sf https://api.ipify.org || exit 1\"]
+      test: ["CMD-SHELL", "curl -sf https://api.ipify.org || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
-      start_interval: 5s
     restart: always
     depends_on:
       - gluetun
@@ -259,7 +265,7 @@ services:
       # qSticky settings
       LOG_LEVEL: INFO
     healthcheck:
-      test: [\"CMD\", \"python3\", \"-c\", \"import json; exit(0 if json.load(open('/app/health/status.json'))['healthy'] else 1)\"]
+      test: ["CMD", "python3", "-c", "import json; exit(0 if json.load(open('/app/health/status.json'))['healthy'] else 1)"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -295,7 +301,7 @@ To verify qSticky is working:
   
   ```bash
   # For API key auth:
-  curl -H \"X-API-Key: your_api_key\" http://localhost:8000/v1/openvpn/portforwarded
+  curl -H "X-API-Key: your_api_key" http://localhost:8000/v1/openvpn/portforwarded
   
   # For Basic auth:
   curl -u username:password http://localhost:8000/v1/openvpn/portforwarded
