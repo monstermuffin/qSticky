@@ -7,11 +7,12 @@ qSticky is an automated port forwarding manager for Gluetun and qBittorrent. It 
 > qSticky v2.0 was refactored to work with Gluetun's control server API instead of the forwarded file as this is being depreciated.
 
 ## ✨ Features
-- 🔄 Automatic port synchronization
-- 👀 Real-time file watching with fallback polling
+- 🔄 Automatic port synchronization via API
 - 🔒 Secure HTTPS support
-- 🐳 Docker deployment
-- 📝 Logging
+- 🎯 Robust error handling and retry logic
+- 🐳 Docker deployment 
+- 📊 Health monitoring and status tracking
+- 📝 Comprehensive logging
 
 ## 🛠️ How it Works
 qSticky monitors Gluetun's port forwarding through its [control server API](https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/control-server.md#openvpn-and-wireguard) and updates qBittorrent's connection settings as needed.
@@ -34,7 +35,7 @@ qSticky monitors Gluetun's port forwarding through its [control server API](http
    - Tracks port changes and any errors
    - Provides Docker health checks
 
-4. **Recovery & Resilience**
+4. **Recovery**
    - Automatically retries on connection failures
    - Maintains session with qBittorrent
    - Handles network interruptions gracefully
@@ -43,9 +44,9 @@ qSticky monitors Gluetun's port forwarding through its [control server API](http
 ### Flow
 ```mermaid
 graph TD;
-    Gluetun-->|Control Server API|qSticky;
-    qSticky-->|Updates Port|qBit;
-    qSticky-->|Writes|Health;
+    A[Gluetun Control Server] -->|API Poll| B[qSticky];
+    B -->|Port Update| C[qBittorrent];
+    B -->|Status Write| D[Health Monitor];
 ```
 
 ## 🚀 Quick Start
@@ -78,8 +79,9 @@ auth = "basic"
 username = "myusername"
 password = "mypassword"
 ```
+
 ### Volume mount
-As in the below examples, mount the config in your docker-compose.yml:
+Mount the config in your docker-compose.yml:
 ```yaml
 services:
   gluetun:
@@ -112,9 +114,9 @@ Gluetun setup is simple and if you're already using it you may just need to add 
 
 To set up port forwarding:
 1. Enable port forwarding in Gluetun by setting `VPN_PORT_FORWARDING=on`
-2. Configure Gluetun's control server (as above).
-3. Ensure qSticky has network access to Gluetun's control server.
-4. Configure authentication (API key or Basic Auth).
+2. Enable Gluetun's control server with `GLUETUN_HTTP_CONTROL_SERVER_ENABLE=on`
+3. Configure authentication (API key or Basic Auth)
+4. Ensure qSticky has network access to Gluetun's control server
 
 A working Gluetun configuration **might** look like:
 ```yaml
@@ -126,11 +128,15 @@ services:
       VPN_SERVICE_PROVIDER: protonvpn
       VPN_TYPE: wireguard
       VPN_PORT_FORWARDING: on
-      WIREGUARD_PRIVATE_KEY: 'wOEI9rqqbDwnN8/Bpp22sVz48T71vJ4fYmFWujulwUU='
+      GLUETUN_HTTP_CONTROL_SERVER_ENABLE: on
+      WIREGUARD_PRIVATE_KEY: 'YOURKEY'
       SERVER_COUNTRIES: Netherlands
+    volumes:
+      - ./gluetun/config.toml:/gluetun/auth/config.toml
 ```
+
 > [!NOTE]  
-> Since we are using gluetun's own container network, port `8000` does not need to be explicitly mapped in docker. If you wish to use the API outside og gluetun's container network, you should map the port.
+> Since we are using docker networking network, port `8000` does not need to be explicitly mapped in docker. If you wish to use the API outside of the docker network, you should map the port.
 
 ## 🔄 qSticky Setup
 > [!TIP]
@@ -139,26 +145,34 @@ services:
 To deploy qSticky, add the service to your compose file as so, changing settings as required:
 ```yaml
 services:
-  qSticky:
+  qsticky:
     image: ghcr.io/monstermuffin/qSticky:latest
-    container_name: qSticky
-    restart: unless-stopped
-    network_mode: "container:gluetun"
+    container_name: qsticky
     environment:
       # qbittorrent settings
-      QBITTORRENT_HOST: localhost
+      QBITTORRENT_HOST: gluetun
       QBITTORRENT_HTTPS: false
       QBITTORRENT_PORT: 8080
       QBITTORRENT_USER: admin
       QBITTORRENT_PASS: adminadmin
       # gluetun settings
+      GLUETUN_HOST: gluetun
       GLUETUN_AUTH_TYPE: apikey
-      GLUETUN_APIKEY: put_api_key_here
+      GLUETUN_APIKEY: your_api_key_here
+      # qSticky settings
+      LOG_LEVEL: INFO
+    healthcheck:
+      test: [\"CMD\", \"python3\", \"-c\", \"import json; exit(0 if json.load(open('/app/health/status.json'))['healthy'] else 1)\"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: always
 ```
+> [!NOTE]  
+> Put qSticky in the same network as gluetun and your host for both gluetun and qBittorrent will be `gluetun`. It is adviced to do this as `container:gluetun` will break the network stack on gluetun restarts.
 
-## 🎮 qbittorrent Setup
-
-Qbittorrent can be deployed like the following example. There will be a lot of other containers available for qbittorrent and what you use is up to you, below is an example from [lsio.io](https://www.linuxserver.io/) as they are popular.
+## 🎮 qBittorrent Setup
+qBittorrent can be deployed like the following example:
 ```yaml
 services:
   qbittorrent:
@@ -173,16 +187,13 @@ services:
     volumes:
       - ./qbittorrent/config:/config
       - ./downloads:/downloads
-    restart: unless-stopped
+    restart: always
     depends_on:
       - gluetun
 ```
 
-## 🧱 Full Stack Setup
-Here is an example stack for deploying Gluetun, qBitorrent and qSticky:
-
-> [!NOTE]  
-> Your VPN configuration will look somewhat different to very different based on protocol and/or provider. Please check the gluetun docs. You should get gluetun working before setting up qSticky if unsure.
+## 🧱 Full Stack Example
+Here is a complete example stack for deploying Gluetun, qBittorrent and qSticky:
 
 ```yaml
 services:
@@ -202,7 +213,7 @@ services:
       SERVER_COUNTRIES: Netherlands
       GLUETUN_HTTP_CONTROL_SERVER_ENABLE: on
     volumes:
-      - ./gluetun/config.toml:/gluetun/auth/config.toml # https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/control-server.md#authentication
+      - ./gluetun/config.toml:/gluetun/auth/config.toml
     ports:
       - 8080:8080  # qBittorrent WebUI
     restart: always
@@ -220,7 +231,7 @@ services:
       - ./qbittorrent/config:/config
       - ./downloads:/downloads
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf https://api.ipify.org || exit 1"]
+      test: [\"CMD-SHELL\", \"curl -sf https://api.ipify.org || exit 1\"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -230,9 +241,9 @@ services:
     depends_on:
       - gluetun
 
-  qsticky2:
+  qsticky:
     image: ghcr.io/monstermuffin/qSticky:latest
-    container_name: qsticky2
+    container_name: qsticky
     environment:
       # qbittorrent settings
       QBITTORRENT_HOST: gluetun
@@ -247,20 +258,11 @@ services:
       # qSticky settings
       LOG_LEVEL: INFO
     healthcheck:
-      test: ["CMD", "python3", "-c", "import json; exit(0 if json.load(open('/app/health/status.json'))['healthy'] else 1)"]
+      test: [\"CMD\", \"python3\", \"-c\", \"import json; exit(0 if json.load(open('/app/health/status.json'))['healthy'] else 1)\"]
       interval: 30s
       timeout: 10s
       retries: 3
     restart: always
-```
-
-> [!NOTE]  
-> If using basic auth, your environment vars for qSticky would look like the following:
-
-```yaml
-      GLUETUN_AUTH_TYPE: basic
-      GLUETUN_USERNAME: admin
-      GLUETUN_PASSWORD: secure_password
 ```
 
 # ⚡ Configuration
@@ -268,107 +270,57 @@ All configuration is done through environment variables:
 
 | Environment Variable | Description | Default |
 |---------------------|-------------|---------|
-| QBITTORRENT_HOST | qBittorrent server hostname | localhost |
+| QBITTORRENT_HOST | qBittorrent server hostname | gluetun |
 | QBITTORRENT_PORT | qBittorrent server port | 8080 |
 | QBITTORRENT_USER | qBittorrent username | admin |
 | QBITTORRENT_PASS | qBittorrent password | adminadmin |
 | QBITTORRENT_HTTPS | Use HTTPS for qBittorrent connection | false |
-| CHECK_INTERVAL | Fallback check interval in seconds | 30 |
-| LOG_LEVEL | Logging level (DEBUG, INFO, WARNING, ERROR) | INFO |
-| HEALTH_FILE | Path to health status file | /tmp/health/status.json |
-| GLUETUN_HOST | Gluetun control server hostname | localhost |
+| CHECK_INTERVAL | API check interval in seconds | 30 |
+| LOG_LEVEL | Logging level (DEBUG, INFO) | INFO |
+| GLUETUN_HOST | Gluetun control server hostname | gluetun |
 | GLUETUN_PORT | Gluetun control server port | 8000 |
 | GLUETUN_AUTH_TYPE | Gluetun authentication type (basic/apikey) | apikey |
-| GLUETUN_USERNAME | Gluetun basic auth username | "" |
-| GLUETUN_PASSWORD | Gluetun basic auth password | "" |
-| GLUETUN_APIKEY | Gluetun API key | "" |
+| GLUETUN_USERNAME | Gluetun basic auth username | \"\" |
+| GLUETUN_PASSWORD | Gluetun basic auth password | \"\" |
+| GLUETUN_APIKEY | Gluetun API key | \"\" |
 
-## 🐣 qBittorrent Credentials: First-Time Setup
-Setting up qSticky with qBittorrent can present a small chicken-and-egg scenario with credentials. Here are your options:
+# 🔍 Verification
+To verify qSticky is working:
 
-* Option 1: Use Defaults
-  * Deploy using qBittorrent's default credentials (admin/adminadmin). 
-  * Change them through qBittorrent's UI afterward.
-
-* Option 2: Staged Setup
-  * Deploy qBittorrent and set your credentials
-  * Update qSticky's environment with matching credentials
-  * Deploy qSticky
-
-> [!NOTE]  
-> Either approach works! Just ensure qSticky's credentials match qBittorrent's final configuration.
-
-## 👤 User Permissions
-qSticky can run as any user, which is particularly useful when running with qBittorrent's user permissions. To run as a specific user, use the `user:` directive in your docker-compose file:
-
-```yaml
-services:
-  qSticky:
-    image: ghcr.io/monstermuffin/qSticky:latest
-    user: "your-qbittorrent-user"  # Optional: Run as specific user
-```
-
-# 🔍 Checks
-To check qSticky is working:
-
-- Check qSticky logs with `docker logs qSticky`
+- Check qSticky logs with `docker logs qsticky`
 - Verify qSticky can connect to Gluetun's control server (check logs for API connection messages)
 - Confirm the port is being updated in qBittorrent's settings
-- If using authentication, ensure the credentials are correctly configured
-- Test the Gluetun API endpoint directly using curl (will only work if you're exposing 8000):
+- Test the Gluetun API endpoint directly using curl (if port 8000 is exposed):
   
   ```bash
   # For API key auth:
-  curl -H "X-API-Key: your_api_key" http://localhost:8000/v1/openvpn/portforwarded
+  curl -H \"X-API-Key: your_api_key\" http://localhost:8000/v1/openvpn/portforwarded
   
   # For Basic auth:
   curl -u username:password http://localhost:8000/v1/openvpn/portforwarded
   ```
 
-When successful, the logs will look something like the following:
+When successful, the logs will look something like:
 
 ```bash
-2025-01-24 20:08:13,178 - qSticky - INFO - Starting qSticky port manager...
-2025-01-24 20:08:13,185 - qSticky - INFO - Successfully logged in to qBittorrent
-2025-01-24 20:08:13,186 - qSticky - INFO - Port change needed: 58988 -> 51218
-2025-01-24 20:08:13,189 - qSticky - INFO - Successfully updated port to 51218
+qsticky - INFO - Starting qSticky port manager...
+qsticky - INFO - Port change needed: 54219 -> 45720
+qsticky - INFO - Successfully updated port to 45720
+qsticky - INFO - Initial status - Gluetun: ✓, qBit: ✓, Port: 45720
 ```
 
-# 💓 Health Checks
-qSticky includes Docker health checks. The health status is written to a file at `/app/health/status.json`. This file is managed internally by the container - you don't need to mount or manage it. Health status includes:
-  - Overall health status
-  - Uptime
-  - Last check timestamp
-  - Last port change time
-  - Current port
-  - Last error (if any)
+# 💓 Health Monitoring
+qSticky includes Docker health checks and maintains a health status file at `/app/health/status.json`. The health status includes:
+- Overall health status
+- Uptime
+- Last check timestamp
+- Last port change time
+- Current port
+- Last error (if any)*
 
 The Docker container will be marked as unhealthy if:
-  - The application fails to write health status
-  - qBittorrent becomes unreachable
-  - Port updates fail repeatedly
-  - Other critical errors occur
 
-# 🧪 Development
-
-## Prerequisites
-- Python 3.11+
-- pip
-
-## Setup
-
-1. Clone the repository:
-```bash
-git clone https://github.com/monstermuffin/qSticky.git
-cd qSticky
-```
-
-2. Install dependencies:
-```bash
-pip install -r requirements.txt
-```
-
-3. Run the application:
-```bash
-python qSticky.py
-```
+- The application fails to write health status
+- qBittorrent becomes unreachable
+- Port updates fail repeatedly
+- Other errors occur
