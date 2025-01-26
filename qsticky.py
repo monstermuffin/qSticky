@@ -12,50 +12,27 @@ from pydantic import Field
 from pydantic_settings import BaseSettings
 from typing_extensions import Annotated
 
-class HealthFileHandler:
-    def __init__(self, file_path: str):
-        self.file_path = file_path
-        self.file = None
-        
-    async def __aenter__(self):
-        os.makedirs(os.path.dirname(self.file_path), exist_ok=True)
-        self.file = open(self.file_path, 'w')
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        if self.file:
-            self.file.close()
-
-    def write_health(self, health_data: dict):
-        json.dump(health_data, self.file)
-        self.file.flush()
 
 class Settings(BaseSettings):
     # Qbit settings
     qbittorrent_host: Annotated[str, Field(
         description="qBittorrent server hostname"
     )] = "localhost"
-    
     qbittorrent_port: Annotated[int, Field(
         description="qBittorrent server port"
     )] = 8080
-    
     qbittorrent_user: Annotated[str, Field(
         description="qBittorrent username"
     )] = "admin"
-    
     qbittorrent_pass: Annotated[str, Field(
         description="qBittorrent password"
     )] = "adminadmin"
-    
     qbittorrent_https: Annotated[bool, Field(
         description="Use HTTPS for qBittorrent connection"
     )] = False
-    
     check_interval: Annotated[int, Field(
         description="Interval in seconds between port checks"
     )] = 30
-    
     log_level: Annotated[str, Field(
         description="Logging level"
     )] = "INFO"
@@ -64,23 +41,18 @@ class Settings(BaseSettings):
     gluetun_host: Annotated[str, Field(
         description="Gluetun control server hostname"
     )] = "localhost"
-    
     gluetun_port: Annotated[int, Field(
         description="Gluetun control server port"
     )] = 8000
-    
     gluetun_auth_type: Annotated[str, Field(
         description="Gluetun authentication type (basic/apikey)"
     )] = "apikey"
-    
     gluetun_username: Annotated[str, Field(
         description="Gluetun basic auth username"
     )] = ""
-    
     gluetun_password: Annotated[str, Field(
         description="Gluetun basic auth password"
     )] = ""
-    
     gluetun_apikey: Annotated[str, Field(
         description="Gluetun API key"
     )] = ""
@@ -88,20 +60,19 @@ class Settings(BaseSettings):
     class Config:
         env_prefix = ""
 
+
 @dataclass
 class HealthStatus:
-   gluetun_healthy: bool = True
-   qbit_healthy: bool = True
-   last_check: datetime = field(default_factory=datetime.now)
-   last_port_change: Optional[datetime] = None
-   last_error: Optional[str] = None
-   current_port: Optional[int] = None
-   uptime: timedelta = timedelta(seconds=0)
+    gluetun_healthy: bool = True
+    qbit_healthy: bool = True
+    last_check: datetime = field(default_factory=datetime.now)
+    last_port_change: Optional[datetime] = None
+    last_error: Optional[str] = None
+    current_port: Optional[int] = None
+
 
 class PortManager:
     def __init__(self):
-        self.health_handler = None
-        
         self.default_timeout = ClientTimeout(
             total=30,
             connect=10,
@@ -119,18 +90,14 @@ class PortManager:
         self.shutdown_event = asyncio.Event()
         self.health_file = os.getenv('HEALTH_FILE', '/tmp/health_status.json')
         self.last_login_failed = False
-        self.last_known_port = None
 
     async def start(self):
-        self.health_handler = HealthFileHandler(self.health_file)
-        await self.health_handler.__aenter__()
+        self.logger.debug("Initialization complete.")
 
     async def cleanup(self) -> None:
         if self.session:
             await self.session.close()
             self.logger.debug("Closed aiohttp session")
-        if self.health_handler:
-            await self.health_handler.__aexit__(None, None, None)
         try:
             if os.path.exists(self.health_file):
                 os.remove(self.health_file)
@@ -148,10 +115,21 @@ class PortManager:
         logger.addHandler(handler)
         return logger
 
+    async def _init_session(self) -> None:
+        if self.session is None:
+            self.session = aiohttp.ClientSession(timeout=self.default_timeout)
+            self.logger.debug("Session initialized with timeouts")
+
     async def get_current_qbit_port(self) -> Optional[int]:
         self.logger.debug("Retrieving current qBittorrent port")
+        if not self.session:
+            await self._init_session()
+
         try:
-            async with self.session.get(f"{self.base_url}/api/v2/app/preferences", timeout=ClientTimeout(total=10)) as response:
+            async with self.session.get(
+                f"{self.base_url}/api/v2/app/preferences",
+                timeout=ClientTimeout(total=10)
+            ) as response:
                 if response.status == 200:
                     prefs = await response.json()
                     if prefs is None:
@@ -167,12 +145,10 @@ class PortManager:
             self.logger.error(f"Error getting current port: {str(e)}")
             return None
 
-    async def _init_session(self) -> None:
-        if self.session is None:
-            self.session = aiohttp.ClientSession(timeout=self.default_timeout)
-            self.logger.debug("Session initialized with timeouts")
-
     async def _login(self) -> bool:
+        if not self.session:
+            await self._init_session()
+
         try:
             async with self.session.post(
                 f"{self.base_url}/api/v2/auth/login",
@@ -185,7 +161,7 @@ class PortManager:
                     self.health_status.qbit_healthy = True
                     if self.last_login_failed:
                         self.logger.info("Successfully logged in to qBittorrent")
-                        self.last_login_failed = False
+                    self.last_login_failed = False
                     return True
                 else:
                     self.logger.error(f"Login failed with status {response.status}")
@@ -202,7 +178,9 @@ class PortManager:
         if not isinstance(new_port, int) or new_port < 1024 or new_port > 65535:
             self.logger.error(f"Invalid port value: {new_port}")
             return False
-            
+        if not self.session:
+            await self._init_session()
+
         try:
             async with self.session.post(
                 f"{self.base_url}/api/v2/app/setPreferences",
@@ -216,28 +194,32 @@ class PortManager:
                         self.health_status.last_port_change = datetime.now()
                         return True
                     else:
-                        self.logger.error(f"Port verification failed: expected {new_port}, got {verified_port}")
+                        self.logger.error(
+                            f"Port verification failed: expected {new_port}, got {verified_port}"
+                        )
                         return False
                 else:
                     self.logger.error(f"Failed to update port: {response.status}")
                     return False
         except Exception as e:
-            self.logger.error(f"Error getting current port: {str(e)}")
+            self.logger.error(f"Error updating port: {str(e)}")
             await self.update_health_file()
-            return None
+            return False
 
     async def _get_forwarded_port(self) -> Optional[int]:
         self.logger.debug("Attempting to get forwarded port from Gluetun")
-        
         max_attempts = 3
         base_delay = 2
-        
+
+        if not self.session:
+            await self._init_session()
+
         headers = {}
         auth = None
 
         if self.settings.gluetun_auth_type == "basic":
             auth = aiohttp.BasicAuth(
-                self.settings.gluetun_username, 
+                self.settings.gluetun_username,
                 self.settings.gluetun_password
             )
         elif self.settings.gluetun_auth_type == "apikey":
@@ -248,34 +230,33 @@ class PortManager:
 
         for attempt in range(max_attempts):
             try:
-                async with aiohttp.ClientSession(timeout=self.default_timeout) as session:
-                    async with session.get(
-                        f"{self.gluetun_base_url}/v1/openvpn/portforwarded",
-                        headers=headers,
-                        auth=auth
-                    ) as response:
-                        if response.status == 401:
-                            self.logger.error("Authentication failed")
+                async with self.session.get(
+                    f"{self.gluetun_base_url}/v1/openvpn/portforwarded",
+                    headers=headers,
+                    auth=auth
+                ) as response:
+                    if response.status == 401:
+                        self.logger.error("Authentication failed")
+                        return None
+
+                    content = await response.text()
+                    if response.status == 200:
+                        try:
+                            data = json.loads(content)
+                            port = data.get("port")
+                            if port:
+                                self.health_status.gluetun_healthy = True
+                                self.health_status.current_port = port
+                                self.logger.debug(f"Retrieved forwarded port from Gluetun: {port}")
+                                return port
+                            self.logger.error("No port in response")
                             return None
-                            
-                        content = await response.text()
-                        if response.status == 200:
-                            try:
-                                data = json.loads(content)
-                                port = data.get("port")
-                                if port:
-                                    self.health_status.gluetun_healthy = True
-                                    self.health_status.current_port = port
-                                    return port
-                                self.logger.error("No port in response")
-                                return None
-                            except json.JSONDecodeError as e:
-                                self.logger.error(f"Failed to parse JSON response: {e}")
-                                return None
-                        else:
-                            self.logger.error(f"Failed to get port: HTTP {response.status}")
+                        except json.JSONDecodeError as e:
+                            self.logger.error(f"Failed to parse JSON response: {e}")
                             return None
-                            
+                    else:
+                        self.logger.error(f"Failed to get port: HTTP {response.status}")
+                        return None
             except asyncio.TimeoutError:
                 delay = base_delay * (attempt + 1)
                 self.logger.warning(f"Timeout on attempt {attempt + 1}, retrying in {delay}s...")
@@ -291,7 +272,7 @@ class PortManager:
     async def handle_port_change(self) -> None:
         try:
             await self._init_session()
-            
+
             new_port = await self._get_forwarded_port()
             if not new_port:
                 self.health_status.gluetun_healthy = False
@@ -304,13 +285,14 @@ class PortManager:
             if not await self._login():
                 self.health_status.qbit_healthy = False
                 return
-                
+
             current_qbit_port = await self.get_current_qbit_port()
             if current_qbit_port is None:
                 self.health_status.qbit_healthy = False
                 return
 
             self.health_status.qbit_healthy = True
+            self.logger.debug(f"Status check - Gluetun port: {new_port}, qBit port: {current_qbit_port}")
 
             if current_qbit_port != new_port:
                 self.logger.info(f"Port change needed: {current_qbit_port} -> {new_port}")
@@ -331,7 +313,7 @@ class PortManager:
             await self.update_health_file()
 
         except Exception as e:
-            self.health_status.qbit_healthy = False 
+            self.health_status.qbit_healthy = False
             self.health_status.last_error = str(e)
             await self.update_health_file()
         finally:
@@ -342,7 +324,10 @@ class PortManager:
     async def get_health(self) -> Dict[str, Any]:
         now = datetime.now()
         return {
-            "healthy": self.health_status.gluetun_healthy and self.health_status.qbit_healthy,
+            "healthy": (
+                self.health_status.gluetun_healthy
+                and self.health_status.qbit_healthy
+            ),
             "services": {
                 "gluetun": {
                     "connected": self.health_status.gluetun_healthy,
@@ -350,12 +335,19 @@ class PortManager:
                 },
                 "qbittorrent": {
                     "connected": self.health_status.qbit_healthy,
-                    "port_synced": self.current_port is not None and self.health_status.qbit_healthy
+                    "port_synced": (
+                        self.current_port is not None
+                        and self.health_status.qbit_healthy
+                    )
                 }
             },
             "uptime": str(now - self.start_time),
             "last_check": self.health_status.last_check.isoformat(),
-            "last_port_change": self.health_status.last_port_change.isoformat() if self.health_status.last_port_change else None,
+            "last_port_change": (
+                self.health_status.last_port_change.isoformat()
+                if self.health_status.last_port_change
+                else None
+            ),
             "timestamp": now.isoformat()
         }
 
@@ -364,7 +356,10 @@ class PortManager:
         auth = None
 
         if self.settings.gluetun_auth_type == "basic":
-            auth = aiohttp.BasicAuth(self.settings.gluetun_username, self.settings.gluetun_password)
+            auth = aiohttp.BasicAuth(
+                self.settings.gluetun_username,
+                self.settings.gluetun_password
+            )
         elif self.settings.gluetun_auth_type == "apikey":
             headers["X-API-Key"] = self.settings.gluetun_apikey
 
@@ -386,21 +381,23 @@ class PortManager:
         try:
             health_dir = os.path.dirname(self.health_file)
             os.makedirs(health_dir, exist_ok=True)
-            
             self.logger.debug(f"Writing health status to {self.health_file}")
             with open(self.health_file, 'w') as f:
                 json.dump(health_data, f)
-                self.logger.debug(f"Successfully wrote health status")
+            self.logger.debug("Successfully wrote health status")
         except Exception as e:
             self.logger.error(f"Failed to write health status: {str(e)}")
 
     async def watch_port(self) -> None:
         self.logger.info("Starting qSticky port manager...")
-        
+        first_run = True
         while not self.shutdown_event.is_set():
             try:
                 watch_task = asyncio.create_task(self.handle_port_change())
-                await asyncio.wait_for(watch_task, timeout=60)  # 1 minute timeout
+                await asyncio.wait_for(watch_task, timeout=60)
+                if first_run:
+                    first_run = False
+                    self.logger.info(f"Initial status - Gluetun: {'✓' if self.health_status.gluetun_healthy else '✗'}, qBit: {'✓' if self.health_status.qbit_healthy else '✗'}, Port: {self.current_port}")
                 await asyncio.sleep(self.settings.check_interval)
             except asyncio.TimeoutError:
                 self.logger.error("Port check timed out")
@@ -426,6 +423,7 @@ class PortManager:
             await self.session.close()
         self.logger.info("Shutdown complete")
 
+
 async def main() -> None:
     manager = PortManager()
     try:
@@ -440,6 +438,7 @@ async def main() -> None:
         await asyncio.gather(*tasks, return_exceptions=True)
     finally:
         await manager.cleanup()
+
 
 if __name__ == "__main__":
     asyncio.run(main())
