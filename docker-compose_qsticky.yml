@@ -1,24 +1,23 @@
 services:
-  qsticky:
-    image: ghcr.io/monstermuffin/qsticky:latest
-    network_mode: "container:gluetun"
+  qsticky2:
+    image: ghcr.io/monstermuffin/qSticky:latest
+    container_name: qsticky2
     environment:
       # qbittorrent settings
-      QBITTORRENT_HOST: localhost
+      QBITTORRENT_HOST: gluetun
       QBITTORRENT_HTTPS: false
       QBITTORRENT_PORT: 8080
       QBITTORRENT_USER: admin
-      QBITTORRENT_PASS: adminadmin
+      QBITTORRENT_PASS: 'YOURPASS'
       # gluetun settings
+      GLUETUN_HOST: gluetun
       GLUETUN_AUTH_TYPE: apikey
-      GLUETUN_APIKEY: put_api_key_here
+      GLUETUN_APIKEY: 'YOURAPIKEY'
       # qSticky settings
       LOG_LEVEL: INFO
     healthcheck:
-      test: ["CMD", "cat /app/health/status.json | grep -q '\"api_connected\": true' || exit 1"]
+      test: ["CMD", "python3", "-c", "import json; exit(0 if json.load(open('/app/health/status.json'))['healthy'] else 1)"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 30s
-      start_interval: 5s
-    restart: on-failure
+    restart: always
