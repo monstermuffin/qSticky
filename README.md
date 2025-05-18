@@ -4,7 +4,7 @@ qSticky is an automated port forwarding manager for Gluetun and qBittorrent. It 
 ![](img/SCR-20241218-lfff.png)
 
 > [!CAUTION]
-> qSticky v2.0 was refactored to work with Gluetun's control server API instead of the forwarded file as this is being depreciated.
+> qSticky v2.0 was refactored to work with Gluetun's control server API instead of the forwarded file as this is being deprecated.
 
 ## 🛠️ How it Works
 qSticky monitors Gluetun's port forwarding through its [control server API](https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/control-server.md#openvpn-and-wireguard) and updates qBittorrent's connection settings as needed.
@@ -147,7 +147,7 @@ To deploy qSticky, add the service to your compose file as so, changing settings
 ```yaml
 services:
   qsticky:
-    image: ghcr.io/monstermuffin/qSticky:latest
+    image: ghcr.io/monstermuffin/qsticky:latest
     container_name: qsticky
     environment:
       # qbittorrent settings
@@ -249,7 +249,7 @@ services:
       - gluetun
 
   qsticky:
-    image: ghcr.io/monstermuffin/qSticky:latest
+    image: ghcr.io/monstermuffin/qsticky:latest
     container_name: qsticky
     environment:
       # qbittorrent settings
