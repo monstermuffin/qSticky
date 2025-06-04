@@ -1,4 +1,4 @@
-aiohttp==3.12.8
+aiohttp==3.12.9
 pydantic==2.11.5
 pydantic-settings==2.9.1
 watchfiles==1.0.5
