@@ -4,6 +4,7 @@ import logging
 import aiohttp
 import asyncio
 import signal
+import ssl
 from typing import Optional, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime, timedelta
@@ -32,6 +33,10 @@ class Settings(BaseSettings):
     
     qbittorrent_https: Annotated[bool, Field(
         description="Use HTTPS for qBittorrent connection"
+    )] = False
+    
+    qbittorrent_verify_ssl: Annotated[bool, Field(
+        description="Verify SSL certificates for qBittorrent"
     )] = False
     
     check_interval: Annotated[int, Field(
@@ -134,7 +139,20 @@ class PortManager:
                 sock_connect=10,
                 sock_read=10
             )
-            self.session = aiohttp.ClientSession(timeout=timeout)
+            
+            # https://github.com/monstermuffin/qSticky/issues/53
+            ssl_context = None
+            if self.settings.qbittorrent_https:
+                if not self.settings.qbittorrent_verify_ssl:
+                    ssl_context = ssl.create_default_context()
+                    ssl_context.check_hostname = False
+                    ssl_context.verify_mode = ssl.CERT_NONE
+                    self.logger.debug("SSL verification disabled (default)")
+                else:
+                    self.logger.debug("SSL verification enabled")
+            
+            connector = aiohttp.TCPConnector(ssl=ssl_context)
+            self.session = aiohttp.ClientSession(timeout=timeout, connector=connector)
             self.logger.debug("Session initialized with timeouts")
 
     async def _login(self) -> bool:
@@ -242,7 +260,16 @@ class PortManager:
         return None
 
     async def handle_port_change(self) -> None:
-        async with aiohttp.ClientSession(timeout=ClientTimeout(total=30)) as session:
+        # https://github.com/monstermuffin/qSticky/issues/53
+        ssl_context = None
+        if self.settings.qbittorrent_https:
+            if not self.settings.qbittorrent_verify_ssl:
+                ssl_context = ssl.create_default_context()
+                ssl_context.check_hostname = False
+                ssl_context.verify_mode = ssl.CERT_NONE
+        
+        connector = aiohttp.TCPConnector(ssl=ssl_context)
+        async with aiohttp.ClientSession(timeout=ClientTimeout(total=30), connector=connector) as session:
             self.session = session
             try:
                 new_port = await self._get_forwarded_port()
