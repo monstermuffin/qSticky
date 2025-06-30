@@ -167,6 +167,9 @@ services:
 > [!NOTE]  
 > Put qSticky in the same network as gluetun and your host for both gluetun and qBittorrent will be `gluetun`. It is adviced to do this as `container:gluetun` will break the network stack on gluetun restarts.
 
+> [!NOTE]  
+> **HTTPS and SSL Certificates**: When using `QBITTORRENT_HTTPS: true`, qSticky defaults to accepting self-signed certificates (`QBITTORRENT_VERIFY_SSL: false`). Set `QBITTORRENT_VERIFY_SSL: true` if you want strict SSL certificate verification.
+
 ## qBittorrent Setup
 
 qBittorrent can be deployed like the following example:
@@ -280,6 +283,7 @@ All configuration is done through environment variables:
 | QBITTORRENT_USER | qBittorrent username | admin |
 | QBITTORRENT_PASS | qBittorrent password | adminadmin |
 | QBITTORRENT_HTTPS | Use HTTPS for qBittorrent connection | false |
+| QBITTORRENT_VERIFY_SSL | Verify SSL certificates for HTTPS connections | false |
 | CHECK_INTERVAL | API check interval in seconds | 30 |
 | LOG_LEVEL | Logging level (DEBUG, INFO, ERROR, WARNING) | INFO |
 | GLUETUN_HOST | Gluetun control server hostname | gluetun |
