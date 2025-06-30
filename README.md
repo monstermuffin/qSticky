@@ -1,37 +1,29 @@
 # qSticky
+
 qSticky is an automated port forwarding manager for Gluetun and qBittorrent. It automatically updates qBittorrent's listening port whenever Gluetun receives a new forwarded port.
 
 ![](img/SCR-20241218-lfff.png)
 
 > [!CAUTION]
-> qSticky v2.0 was refactored to work with Gluetun's control server API instead of the forwarded file as this is being depreciated.
+> qSticky v2.0 was refactored to work with Gluetun's control server API instead of the forwarded file as this is being deprecated.
 
-## 🛠️ How it Works
+## How it Works
+
 qSticky monitors Gluetun's port forwarding through its [control server API](https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/control-server.md#openvpn-and-wireguard) and updates qBittorrent's connection settings as needed.
 
-1. **Port Monitoring**
-   - qSticky queries Gluetun's control server API endpoint at `/v1/openvpn/portforwarded`
-   - Supports both Basic Auth and API Key authentication methods
-   - Polls the API at configurable intervals (default: 30 seconds)
+**Port Monitoring**
+- Queries Gluetun's control server API endpoint at `/v1/openvpn/portforwarded`
+- Supports both Basic Auth and API Key authentication methods
+- Polls the API at configurable intervals (default: 30 seconds)
 
-2. **Port Management**
-   - When a new port is detected:
-     - Retrieves the port number from Gluetun's API
-     - Connects to qBittorrent's WebUI API
-     - Updates qBittorrent's listening port
-     - Verifies the change was successful
+**Port Management**
+When a new port is detected, qSticky retrieves the port number from Gluetun's API, connects to qBittorrent's WebUI API, updates qBittorrent's listening port, and verifies the change was successful.
 
-3. **Health Monitoring**
-   - Maintains a health status file
-   - Checks qBittorrent connectivity regularly
-   - Tracks port changes and any errors
-   - Provides Docker health checks
+**Health Monitoring**
+qSticky maintains a health status file, checks qBittorrent connectivity regularly, tracks port changes and any errors, and provides Docker health checks.
 
-4. **Recovery**
-   - Automatically retries on connection failures
-   - Maintains session with qBittorrent
-   - Handles network interruptions gracefully
-   - Logs important events and errors
+**Recovery**
+The application automatically retries on connection failures, maintains session with qBittorrent, handles network interruptions gracefully, and logs important events and errors.
 
 ### Flow
 ```mermaid
@@ -41,12 +33,13 @@ graph TD;
     B -->|Status Write| D[Health Monitor];
 ```
 
-## 🚀 Quick Start
+## Quick Start
 
 > [!IMPORTANT]  
 > qSticky only supports [whatever gluetun natively supports for automatic port forwarding.](https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/vpn-port-forwarding.md#native-integrations) At time of writing, this is PIA and ProtonVPN.
 
-## 🔑 Authentication Setup
+## Authentication Setup
+
 qSticky requires access to Gluetun's control server API to monitor port forwarding. You need to configure this one of two ways:
 
 > [!IMPORTANT]  
@@ -110,8 +103,9 @@ services:
 
 For complete details on Gluetun's control server authentication, check out the [official Gluetun documentation.](https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/control-server.md#openvpn-and-wireguard)
 
-## 🐋 Gluetun Setup
-Gluetun setup is simple and if you're already using it you may just need to add some simple env vars:
+## Gluetun Setup
+
+Gluetun setup is straightforward. If you're already using it you may just need to add some environment variables:
 
 To set up port forwarding:
 1. Enable port forwarding in Gluetun by setting `VPN_PORT_FORWARDING=on`
@@ -119,7 +113,7 @@ To set up port forwarding:
 3. Configure authentication (API key or Basic Auth)
 4. Ensure qSticky has network access to Gluetun's control server
 
-A working Gluetun configuration **might** look like:
+A working Gluetun configuration might look like:
 ```yaml
 services:
   gluetun:
@@ -139,7 +133,8 @@ services:
 > [!NOTE]  
 > Since we are using docker compose networking, port `8000` does not need to be explicitly mapped in docker. If you wish to use the API outside of the docker network, you should map the port.
 
-## 🔄 qSticky Setup
+## qSticky Setup
+
 > [!TIP]
 > A full list of environment variables are listed and explained below.
 
@@ -147,7 +142,7 @@ To deploy qSticky, add the service to your compose file as so, changing settings
 ```yaml
 services:
   qsticky:
-    image: ghcr.io/monstermuffin/qSticky:latest
+    image: ghcr.io/monstermuffin/qsticky:latest
     container_name: qsticky
     environment:
       # qbittorrent settings
@@ -172,7 +167,8 @@ services:
 > [!NOTE]  
 > Put qSticky in the same network as gluetun and your host for both gluetun and qBittorrent will be `gluetun`. It is adviced to do this as `container:gluetun` will break the network stack on gluetun restarts.
 
-## 🎮 qBittorrent Setup
+## qBittorrent Setup
+
 qBittorrent can be deployed like the following example:
 ```yaml
 services:
@@ -201,7 +197,8 @@ services:
 > [!NOTE]
 > I use the above `healthcheck` to ensure qbittorrent is working. If that check fails, it means qbittorrent can't get out of gluetun's network and marks the container as unhealthy.
 
-## 🧱 Full Stack Example
+## Full Stack Example
+
 Here is a complete example stack for deploying Gluetun, qBittorrent and qSticky:
 
 ```yaml
@@ -249,7 +246,7 @@ services:
       - gluetun
 
   qsticky:
-    image: ghcr.io/monstermuffin/qSticky:latest
+    image: ghcr.io/monstermuffin/qsticky:latest
     container_name: qsticky
     environment:
       # qbittorrent settings
@@ -272,7 +269,8 @@ services:
     restart: always
 ```
 
-# ⚡ Configuration
+## Configuration
+
 All configuration is done through environment variables:
 
 | Environment Variable | Description | Default |
@@ -291,7 +289,8 @@ All configuration is done through environment variables:
 | GLUETUN_PASSWORD | Gluetun basic auth password | "" |
 | GLUETUN_APIKEY | Gluetun API key | "" |
 
-# 🔍 Verification
+## Verification
+
 To verify qSticky is working:
 
 - Check qSticky logs with `docker logs qsticky`
@@ -316,14 +315,15 @@ qsticky - INFO - Successfully updated port to 45720
 qsticky - INFO - Initial status - Gluetun: ✓, qBit: ✓, Port: 45720
 ```
 
-# 💓 Health Monitoring
+## Health Monitoring
+
 qSticky includes Docker health checks and maintains a health status file at `/app/health/status.json`. The health status includes:
 - Overall health status
 - Uptime
 - Last check timestamp
 - Last port change time
 - Current port
-- Last error (if any)*
+- Last error (if any)
 
 The Docker container will be marked as unhealthy if:
 
