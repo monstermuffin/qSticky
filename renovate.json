@@ -16,7 +16,12 @@
       {
         "matchPackageNames": ["python"],
         "ignoreUnstable": true,
-        "allowedVersions": "<3.13"
+        "allowedVersions": "<=3.13"
+      },
+      {
+        "matchDatasources": ["docker"],
+        "matchPackageNames": ["python"],
+        "allowedVersions": "<3.14"
       }
     ],
     "docker": {
