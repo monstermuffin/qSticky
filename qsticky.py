@@ -375,7 +375,12 @@ class PortManager:
             self.logger.error(f"Failed to write health status: {str(e)}")
 
     async def watch_port(self) -> None:
-        self.logger.info("Starting qSticky port manager...")
+        git_commit = os.getenv('GIT_COMMIT', 'unknown')
+        if git_commit != 'unknown':
+            short_commit = git_commit[:7]
+            self.logger.info(f"Starting qSticky port manager (commit: {short_commit})...")
+        else:
+            self.logger.info("Starting qSticky port manager...")
         
         while not self.shutdown_event.is_set():
             try:
