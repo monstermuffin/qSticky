@@ -9,7 +9,7 @@ from typing import Optional, Dict, Any
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from aiohttp import ClientTimeout
-from pydantic import Field
+from pydantic import Field, ConfigDict
 from pydantic_settings import BaseSettings
 from typing_extensions import Annotated
 
@@ -72,8 +72,7 @@ class Settings(BaseSettings):
         description="Gluetun API key"
     )] = ""
 
-    class Config:
-        env_prefix = ""
+    model_config = ConfigDict(env_prefix="")
 
 @dataclass
 class HealthStatus:
