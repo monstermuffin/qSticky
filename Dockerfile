@@ -1,12 +1,19 @@
+FROM python AS builder
+
+WORKDIR /install
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
 FROM python:slim
 
 WORKDIR /app
 
-COPY qsticky.py .
-COPY requirements.txt .
+COPY --from=builder /install /usr/local
 
-RUN python -m pip install --no-cache-dir -r requirements.txt && \
-    mkdir -p /app/health && \
+COPY qsticky.py .
+
+RUN mkdir -p /app/health && \
     touch /app/health/status.json && \
     chmod 666 /app/health/status.json && \
     chmod 777 /app/health
