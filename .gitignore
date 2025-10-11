@@ -6,6 +6,7 @@ __pycache__/
 .Python
 env/
 venv/
+*au*
 .env
 .venv
 dist/
