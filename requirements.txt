@@ -1,4 +1,4 @@
-aiohttp==3.13.1
+aiohttp==3.13.2
 zstandard>=0.23.0
 pydantic==2.12.3
 pydantic-settings==2.11.0
