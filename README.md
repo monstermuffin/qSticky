@@ -5,7 +5,7 @@ qSticky is an automated port forwarding manager for Gluetun and qBittorrent. It 
 ![](img/SCR-20241218-lfff.png)
 
 > [!IMPORTANT]  
-> **Gluetun v3.39.0+ API Change:** qSticky now uses Gluetun's new unified API endpoints (`/v1/portforward`, `/v1/vpn/status`). If you're upgrading from an older version or experiencing 401 errors, you'll need to update your `config.toml` authentication file. See the [Authentication Setup](#authentication-setup) section below for the updated configuration.
+> **Gluetun v3.40.1+ API Change:** qSticky now uses Gluetun's new API endpoints (`/v1/portforward`, `/v1/vpn/status`). If you're upgrading from an older version or experiencing 401 errors, you'll need to update your `config.toml` authentication file. See the [Authentication Setup](#authentication-setup) section below for the updated configuration.
 
 ## How it Works
 
