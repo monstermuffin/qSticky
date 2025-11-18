@@ -260,7 +260,7 @@ class PortManager:
                                     try:
                                         data = json.loads(await legacy_response.text())
                                         port = data.get("port")
-                                        self.logger.warning(f"Successfully retrieved port {port} from legacy endpoint. Please update your config.toml to include 'GET /v1/portforward'")
+                                        self.logger.warning(f"Successfully retrieved port {port} from legacy endpoint.")
                                         return port
                                     except json.JSONDecodeError as e:
                                         self.logger.error(f"Failed to parse JSON response from legacy endpoint: {e}")
