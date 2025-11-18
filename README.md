@@ -33,6 +33,9 @@ graph TD;
 ## Quick Start
 
 > [!IMPORTANT]  
+> **Gluetun v3.39.0+ API Change:** qSticky now uses Gluetun's new unified API endpoints (`/v1/portforward`, `/v1/vpn/status`). If you're upgrading from an older version or experiencing 401 errors, you'll need to update your `config.toml` authentication file. See the [Authentication Setup](#authentication-setup) section below for the updated configuration.
+
+> [!IMPORTANT]  
 > qSticky only supports [whatever gluetun natively supports for automatic port forwarding.](https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/vpn-port-forwarding.md#native-integrations) At time of writing, this is PIA and ProtonVPN.
 
 ## Authentication Setup
@@ -74,8 +77,8 @@ username = "myusername"
 password = "mypassword"
 ```
 
-> [!IMPORTANT]
-> **Gluetun v3.39.0+ Required:** qSticky now uses the new unified API endpoints (`/v1/portforward`, `/v1/vpn/status`). If you need to support older Gluetun versions, you can add the legacy endpoints (`GET /v1/openvpn/portforwarded`, `GET /v1/openvpn/status`) to your config.toml as well, though we recommend upgrading Gluetun.
+> [!NOTE]
+> The configuration above includes both new (`/v1/portforward`, `/v1/vpn/status`) and legacy (`/v1/openvpn/*`) endpoints for maximum compatibility. qSticky uses the new endpoints, while the legacy endpoints are included to ensure compatibility if Gluetun redirects requests.
 
 
 ### Volume mount
