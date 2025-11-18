@@ -36,7 +36,7 @@ graph TD;
 ## Quick Start
 
 > [!IMPORTANT]  
-> qSticky only supports [whatever gluetun natively supports for automatic port forwarding.](https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/vpn-port-forwarding.md#native-integrations) At time of writing, this is PIA and ProtonVPN.
+> qSticky only supports [VPN providers with native port forwarding integration in Gluetun.](https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/vpn-port-forwarding.md#native-integrations) Currently supported providers: **Private Internet Access (PIA)**, **ProtonVPN**, **Perfect Privacy**, and **PrivateVPN**. I recommend using ProtonVPN and my shill link is [here.](https://go.getproton.me/SH1kn)
 
 ## Authentication Setup
 
