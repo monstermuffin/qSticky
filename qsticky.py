@@ -231,6 +231,7 @@ class PortManager:
 
                 timeout = ClientTimeout(total=10)
                 async with aiohttp.ClientSession(timeout=timeout) as session:
+                    # New endpoint (Gluetun v3.39.0+)
                     async with session.get(
                         f"{self.gluetun_base_url}/v1/portforward",
                         headers=headers,
@@ -247,6 +248,26 @@ class PortManager:
                             except json.JSONDecodeError as e:
                                 self.logger.error(f"Failed to parse JSON response: {e}")
                                 return None
+                        elif response.status == 401:
+                            # Temp fallback: Try legacy endpoint for users with old config.toml - REMOVE THIS IF YOU'RE LOOKING BACK AT THIS FOR SOME REASON
+                            self.logger.warning("Got 401 on new endpoint, trying legacy endpoint /v1/openvpn/portforwarded")
+                            async with session.get(
+                                f"{self.gluetun_base_url}/v1/openvpn/portforwarded",
+                                headers=headers,
+                                auth=auth
+                            ) as legacy_response:
+                                if legacy_response.status == 200:
+                                    try:
+                                        data = json.loads(await legacy_response.text())
+                                        port = data.get("port")
+                                        self.logger.warning(f"Successfully retrieved port {port} from legacy endpoint. Please update your config.toml to include 'GET /v1/portforward'")
+                                        return port
+                                    except json.JSONDecodeError as e:
+                                        self.logger.error(f"Failed to parse JSON response from legacy endpoint: {e}")
+                                        return None
+                                else:
+                                    self.logger.error(f"Failed to get port from legacy endpoint: HTTP {legacy_response.status}")
+                                    return None
                         else:
                             self.logger.error(f"Failed to get port: HTTP {response.status}")
                             return None
@@ -349,13 +370,26 @@ class PortManager:
 
         try:
             async with aiohttp.ClientSession() as session:
+                # Try new endpoint first (Gluetun v3.39.0+)
                 async with session.get(
                     f"{self.gluetun_base_url}/v1/vpn/status",
                     headers=headers,
                     auth=auth
                 ) as response:
                     self.logger.debug(f"Connectivity check status: {response.status}")
-                    return response.status == 200
+                    if response.status == 200:
+                        return True
+                    elif response.status == 401:
+                        # TEMPORARY FALLBACK: Try legacy endpoint for users with old config.toml
+                        # TODO: Remove this fallback after v3.0.0 (added 2024-11-18)
+                        self.logger.debug("Got 401 on new status endpoint, trying legacy endpoint /v1/openvpn/status")
+                        async with session.get(
+                            f"{self.gluetun_base_url}/v1/openvpn/status",
+                            headers=headers,
+                            auth=auth
+                        ) as legacy_response:
+                            return legacy_response.status == 200
+                    return False
         except Exception as e:
             self.logger.debug(f"Connectivity check failed: {str(e)}")
             return False
