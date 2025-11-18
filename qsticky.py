@@ -232,7 +232,7 @@ class PortManager:
                 timeout = ClientTimeout(total=10)
                 async with aiohttp.ClientSession(timeout=timeout) as session:
                     async with session.get(
-                        f"{self.gluetun_base_url}/v1/openvpn/portforwarded",
+                        f"{self.gluetun_base_url}/v1/portforward",
                         headers=headers,
                         auth=auth
                     ) as response:
@@ -350,7 +350,7 @@ class PortManager:
         try:
             async with aiohttp.ClientSession() as session:
                 async with session.get(
-                    f"{self.gluetun_base_url}/v1/openvpn/status",
+                    f"{self.gluetun_base_url}/v1/vpn/status",
                     headers=headers,
                     auth=auth
                 ) as response:

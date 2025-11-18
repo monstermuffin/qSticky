@@ -9,7 +9,7 @@ qSticky is an automated port forwarding manager for Gluetun and qBittorrent. It 
 qSticky monitors Gluetun's port forwarding through its [control server API](https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/control-server.md#openvpn-and-wireguard) and updates qBittorrent's connection settings as needed.
 
 **Port Monitoring**
-- Queries Gluetun's control server API endpoint at `/v1/openvpn/portforwarded`
+- Queries Gluetun's control server API endpoint at `/v1/portforward` (Gluetun v3.39.0+)
 - Supports both Basic Auth and API Key authentication methods
 - Polls the API at configurable intervals (default: 30 seconds)
 
@@ -44,31 +44,38 @@ qSticky requires access to Gluetun's control server API to monitor port forwardi
 
 ### Create Authentication Config
 Create a `config.toml` file somewhere to be mapped into gluetun:
+
 ```toml
 [[roles]]
 name = "qSticky"
 routes = [
     "GET /v1/openvpn/portforwarded",
-    "GET /v1/openvpn/status"
+    "GET /v1/portforward",
+    "GET /v1/openvpn/status",
+    "GET /v1/vpn/status"
 ]
 auth = "apikey"
 apikey = "your_api_key_here"
 ```
 
 Or if you prefer basic auth:
+
 ```toml
 [[roles]]
 name = "qSticky"
 routes = [
     "GET /v1/openvpn/portforwarded",
-    "GET /v1/openvpn/status"
+    "GET /v1/portforward",
+    "GET /v1/openvpn/status",
+    "GET /v1/vpn/status"
 ]
 auth = "basic"
 username = "myusername"
 password = "mypassword"
 ```
-> [!NOTE]
->`/v1/openvpn/portforwarded` is required for the dynamic port mapping, and `/v1/openvpn/status` is required for gluetun's health status.
+
+> [!IMPORTANT]
+> **Gluetun v3.39.0+ Required:** qSticky now uses the new unified API endpoints (`/v1/portforward`, `/v1/vpn/status`). If you need to support older Gluetun versions, you can add the legacy endpoints (`GET /v1/openvpn/portforwarded`, `GET /v1/openvpn/status`) to your config.toml as well, though we recommend upgrading Gluetun.
 
 
 ### Volume mount
@@ -301,10 +308,10 @@ To verify qSticky is working:
   
   ```bash
   # For API key auth:
-  curl -H "X-API-Key: your_api_key" http://localhost:8000/v1/openvpn/portforwarded
+  curl -H "X-API-Key: your_api_key" http://localhost:8000/v1/portforward
   
   # For Basic auth:
-  curl -u username:password http://localhost:8000/v1/openvpn/portforwarded
+  curl -u username:password http://localhost:8000/v1/portforward
   ```
 
 When successful, the logs will look something like:
