@@ -4,6 +4,9 @@ qSticky is an automated port forwarding manager for Gluetun and qBittorrent. It 
 
 ![](img/SCR-20241218-lfff.png)
 
+> [!IMPORTANT]  
+> **Gluetun v3.39.0+ API Change:** qSticky now uses Gluetun's new unified API endpoints (`/v1/portforward`, `/v1/vpn/status`). If you're upgrading from an older version or experiencing 401 errors, you'll need to update your `config.toml` authentication file. See the [Authentication Setup](#authentication-setup) section below for the updated configuration.
+
 ## How it Works
 
 qSticky monitors Gluetun's port forwarding through its [control server API](https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/control-server.md#openvpn-and-wireguard) and updates qBittorrent's connection settings as needed.
@@ -33,9 +36,6 @@ graph TD;
 ## Quick Start
 
 > [!IMPORTANT]  
-> **Gluetun v3.39.0+ API Change:** qSticky now uses Gluetun's new unified API endpoints (`/v1/portforward`, `/v1/vpn/status`). If you're upgrading from an older version or experiencing 401 errors, you'll need to update your `config.toml` authentication file. See the [Authentication Setup](#authentication-setup) section below for the updated configuration.
-
-> [!IMPORTANT]  
 > qSticky only supports [whatever gluetun natively supports for automatic port forwarding.](https://github.com/qdm12/gluetun-wiki/blob/main/setup/advanced/vpn-port-forwarding.md#native-integrations) At time of writing, this is PIA and ProtonVPN.
 
 ## Authentication Setup
@@ -52,9 +52,7 @@ Create a `config.toml` file somewhere to be mapped into gluetun:
 [[roles]]
 name = "qSticky"
 routes = [
-    "GET /v1/openvpn/portforwarded",
     "GET /v1/portforward",
-    "GET /v1/openvpn/status",
     "GET /v1/vpn/status"
 ]
 auth = "apikey"
@@ -67,9 +65,7 @@ Or if you prefer basic auth:
 [[roles]]
 name = "qSticky"
 routes = [
-    "GET /v1/openvpn/portforwarded",
     "GET /v1/portforward",
-    "GET /v1/openvpn/status",
     "GET /v1/vpn/status"
 ]
 auth = "basic"
@@ -78,7 +74,7 @@ password = "mypassword"
 ```
 
 > [!NOTE]
-> The configuration above includes both new (`/v1/portforward`, `/v1/vpn/status`) and legacy (`/v1/openvpn/*`) endpoints for maximum compatibility. qSticky uses the new endpoints, while the legacy endpoints are included to ensure compatibility if Gluetun redirects requests.
+> `/v1/portforward` is required for dynamic port mapping, and `/v1/vpn/status` is required for Gluetun's health status checks.
 
 
 ### Volume mount
