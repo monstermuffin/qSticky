@@ -40,6 +40,9 @@ graph TD;
 
 ## Authentication Setup
 
+> [!IMPORTANT]
+> **401 Error in qSticky logs?** You need to update your Gluetun `config.toml` file to include the new API endpoints. Follow the configuration examples below to fix authentication issues with Gluetun v3.39.0+.
+
 qSticky requires access to Gluetun's control server API to monitor port forwarding. You need to configure this one of two ways:
 
 > [!IMPORTANT]  

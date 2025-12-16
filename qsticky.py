@@ -254,17 +254,21 @@ class PortManager:
                             async with session.get(
                                 f"{self.gluetun_base_url}/v1/openvpn/portforwarded",
                                 headers=headers,
-                                auth=auth
+                                auth=auth,
+                                allow_redirects=False  # Don't follow redirects, handle 301 manually
                             ) as legacy_response:
                                 if legacy_response.status == 200:
                                     try:
                                         data = json.loads(await legacy_response.text())
                                         port = data.get("port")
-                                        self.logger.warning(f"Successfully retrieved port {port} from legacy endpoint.")
+                                        self.logger.warning(f"Successfully retrieved port {port} from legacy endpoint. Please update your config.toml to include 'GET /v1/portforward'")
                                         return port
                                     except json.JSONDecodeError as e:
                                         self.logger.error(f"Failed to parse JSON response from legacy endpoint: {e}")
                                         return None
+                                elif legacy_response.status == 301:
+                                    self.logger.error("Legacy endpoint redirects to new endpoint, but new endpoint not authorised. Please update your config.toml: https://github.com/monstermuffin/qSticky/tree/main?tab=readme-ov-file#authentication-setup")
+                                    return None
                                 else:
                                     self.logger.error(f"Failed to get port from legacy endpoint: HTTP {legacy_response.status}")
                                     return None
@@ -386,8 +390,12 @@ class PortManager:
                         async with session.get(
                             f"{self.gluetun_base_url}/v1/openvpn/status",
                             headers=headers,
-                            auth=auth
+                            auth=auth,
+                            allow_redirects=False  # Don't follow redirects - handle 301 manually
                         ) as legacy_response:
+                            if legacy_response.status == 301:
+                                self.logger.debug("Legacy status endpoint redirects to new endpoint")
+                                return False
                             return legacy_response.status == 200
                     return False
         except Exception as e:
