@@ -45,7 +45,7 @@ graph TD;
 
 qSticky requires access to Gluetun's control server API to monitor port forwarding. You need to configure this one of two ways:
 
-> [!IMPORTANT]  
+> [!NOTE]  
 > Authentication is required for qSticky to function. No unauthenticated access is supported, as Gluetun is deprecating unauthenticated endpoints.
 
 ### Create Authentication Config
