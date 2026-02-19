@@ -1,7 +1,7 @@
 aiohttp==3.13.3
 zstandard>=0.23.0
 pydantic==2.12.5
-pydantic-settings==2.13.0
+pydantic-settings==2.13.1
 watchfiles==1.1.1
 typing-extensions==4.15.0
 httpie==3.2.4
