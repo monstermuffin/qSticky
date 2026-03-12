@@ -348,7 +348,7 @@ If you find qSticky useful and want to support me, here are some completely opti
 ### ProtonVPN
 If you're looking for a VPN service that works great with qSticky, I can highly recommend [ProtonVPN](https://go.getproton.me/SH1kn) (referral link). ProtonVPN has excellent port forwarding support and works seamlessly with Gluetun (hence this project existing!)
 
-### Buy Me a Coffee
-You can also [buy me a coffee.](https://buymeacoffee.com/muffn)
+### Ko-fi
+[![Tip me on Ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/muffn_)
 
 Cheers!
