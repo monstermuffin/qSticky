@@ -3,6 +3,7 @@ import json
 import logging
 import aiohttp
 import asyncio
+import ipaddress
 import signal
 import ssl
 from typing import Optional, Dict, Any
@@ -98,6 +99,9 @@ class PortManager:
         self.last_login_failed = False
         self.first_run = True
         self.last_known_port = None
+        self.use_unsafe_qbit_cookie_jar = self._is_ip_address(
+            self.settings.qbittorrent_host
+        )
 
     def _setup_logger(self) -> logging.Logger:
         logger = logging.getLogger("qsticky")
@@ -109,6 +113,19 @@ class PortManager:
         handler.setFormatter(formatter)
         logger.addHandler(handler)
         return logger
+
+    def _is_ip_address(self, host: str) -> bool:
+        try:
+            ipaddress.ip_address(host)
+            return True
+        except ValueError:
+            return False
+
+    def _get_qbit_cookie_jar(self) -> Optional[aiohttp.CookieJar]:
+        if not self.use_unsafe_qbit_cookie_jar:
+            return None
+
+        return aiohttp.CookieJar(unsafe=True)
 
     async def get_current_qbit_port(self) -> Optional[int]:
         self.logger.debug("Retrieving current qBittorrent port")
@@ -151,7 +168,11 @@ class PortManager:
                     self.logger.debug("SSL verification enabled")
             
             connector = aiohttp.TCPConnector(ssl=ssl_context)
-            self.session = aiohttp.ClientSession(timeout=timeout, connector=connector)
+            self.session = aiohttp.ClientSession(
+                timeout=timeout,
+                connector=connector,
+                cookie_jar=self._get_qbit_cookie_jar()
+            )
             self.logger.debug("Session initialized with timeouts")
 
     async def _login(self) -> bool:
@@ -293,7 +314,11 @@ class PortManager:
                 ssl_context.verify_mode = ssl.CERT_NONE
         
         connector = aiohttp.TCPConnector(ssl=ssl_context)
-        async with aiohttp.ClientSession(timeout=ClientTimeout(total=30), connector=connector) as session:
+        async with aiohttp.ClientSession(
+            timeout=ClientTimeout(total=30),
+            connector=connector,
+            cookie_jar=self._get_qbit_cookie_jar()
+        ) as session:
             self.session = session
             try:
                 new_port = await self._get_forwarded_port()
