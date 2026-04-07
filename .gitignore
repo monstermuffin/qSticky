@@ -9,6 +9,7 @@ venv/
 *au*
 .env
 .venv
+node_modules/
 dist/
 build/
 *.egg-info/
