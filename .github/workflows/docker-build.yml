@@ -68,15 +68,16 @@ jobs:
         if: steps.release_preview.outputs.release_needed == 'true'
         run: |
           version="${{ steps.release_preview.outputs.version }}"
+          image_name="${GITHUB_REPOSITORY,,}"
           major="${version%%.*}"
           minor="${version#*.}"
           minor="${minor%%.*}"
 
           {
             echo "tags<<EOF"
-            echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${version}"
-            echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${major}.${minor}"
-            echo "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${major}"
+            echo "${{ env.REGISTRY }}/${image_name}:${version}"
+            echo "${{ env.REGISTRY }}/${image_name}:${major}.${minor}"
+            echo "${{ env.REGISTRY }}/${image_name}:${major}"
             echo "EOF"
           } >> "$GITHUB_OUTPUT"
 
