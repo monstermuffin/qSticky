@@ -3,9 +3,9 @@ name: Build and Push Multi-Arch Image
 on:
   workflow_dispatch:
   push:
-    branches: [ main, dev ]
+    branches: [ main, dev, qbit-session ]
   pull_request:
-    branches: [ main, dev ]
+    branches: [ main, dev, qbit-session ]
 
 env:
   REGISTRY: ghcr.io
@@ -21,6 +21,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+
+      - name: Normalize image name
+        id: image_name
+        run: echo "value=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v4
@@ -40,10 +44,11 @@ jobs:
         id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          images: ${{ env.REGISTRY }}/${{ steps.image_name.outputs.value }}
           tags: |
               type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', github.event.repository.default_branch) }}
               type=raw,value=dev,enable=${{ github.ref == 'refs/heads/dev' }}
+              type=raw,value=qbit-session,enable=${{ github.ref == 'refs/heads/qbit-session' }}
               type=sha,format=short
               type=ref,event=pr
               type=semver,pattern={{version}}
@@ -62,4 +67,3 @@ jobs:
             GIT_COMMIT=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
