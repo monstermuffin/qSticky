@@ -3,9 +3,9 @@ name: Build and Push Multi-Arch Image
 on:
   workflow_dispatch:
   push:
-    branches: [ main, dev ]
+    branches: [ main, dev, qbit-session ]
   pull_request:
-    branches: [ main, dev ]
+    branches: [ main, dev, qbit-session ]
 
 env:
   REGISTRY: ghcr.io
@@ -62,4 +62,3 @@ jobs:
             GIT_COMMIT=${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
