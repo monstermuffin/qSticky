@@ -184,14 +184,20 @@ class PortManager:
                     "password": self.settings.qbittorrent_pass
                 }
             ) as response:
-                if response.status == 200:
+                # qBittorrent <5.2.0 returns 200 OK with body "Ok." on success.
+                # qBittorrent ≥5.2.0 (WebAPI 2.14.0) returns 204 No Content on success
+                # and 401 Unauthorized on bad credentials (PR #21349 / #23202).
+                if response.status in (200, 204):
                     if self.first_run or self.last_login_failed:
                         self.logger.info("Successfully logged in to qBittorrent")
                         self.last_login_failed = False
                     self.health_status.healthy = True
                     return True
                 else:
-                    self.logger.error(f"Login failed with status {response.status}")
+                    if response.status == 401:
+                        self.logger.error("Login failed: invalid credentials (HTTP 401)")
+                    else:
+                        self.logger.error(f"Login failed with status {response.status}")
                     self.health_status.healthy = False
                     self.health_status.last_error = f"Login failed: {response.status}"
                     self.last_login_failed = True
@@ -210,7 +216,8 @@ class PortManager:
                 f"{self.base_url}/api/v2/app/setPreferences",
                 data={'json': f'{{"listen_port":{new_port}}}'}
             ) as response:
-                if response.status == 200:
+                # qBittorrent ≥5.2.0 returns 204 No Content for no-body endpoints.
+                if response.status in (200, 204):
                     verified_port = await self.get_current_qbit_port()
                     if verified_port == new_port:
                         self.current_port = new_port
