@@ -213,7 +213,10 @@ class PortManager:
                 }
             ) as response:
                 content = (await response.text()).strip()
-                if response.status == 200 and content == "Ok.":
+                # qBittorrent <5.2.0  → 200 OK with body "Ok." on success
+                # qBittorrent ≥5.2.0 (WebAPI 2.14.0, PR #21349) → 204 No Content on success,
+                #                                                   401 Unauthorized on bad credentials
+                if response.status == 204 or (response.status == 200 and content == "Ok."):
                     if self.first_run or self.last_login_failed:
                         self.logger.info("Successfully logged in to qBittorrent")
                         self.last_login_failed = False
@@ -222,9 +225,12 @@ class PortManager:
                     self.health_status.last_error = None
                     return True
 
-                self.logger.error(
-                    f"Login failed with status {response.status}: {content or 'empty response'}"
-                )
+                if response.status == 401:
+                    self.logger.error("Login failed: invalid credentials (HTTP 401)")
+                else:
+                    self.logger.error(
+                        f"Login failed with status {response.status}: {content or 'empty response'}"
+                    )
                 self.health_status.healthy = False
                 self.health_status.last_error = (
                     f"Login failed: {response.status} {content}".strip()
@@ -259,7 +265,9 @@ class PortManager:
             ) as response:
                 content = await response.text()
 
-                if response.status in (401, 403) and retry:
+                # 403 = session expired, recreate and retry.
+                # 401 on ≥5.2.0 means bad credentials (not an expired session) — don't retry.
+                if response.status == 403 and retry:
                     self.logger.warning(
                         f"qBittorrent request to {path} returned {response.status}, recreating session"
                     )
@@ -299,7 +307,8 @@ class PortManager:
                 "/api/v2/app/setPreferences",
                 data={'json': f'{{"listen_port":{new_port}}}'}
             )
-            if status == 200:
+            # qBittorrent ≥5.2.0 returns 204 No Content for no-body endpoints.
+            if status in (200, 204):
                 verified_port = await self.get_current_qbit_port()
                 if verified_port == new_port:
                     self.current_port = new_port
