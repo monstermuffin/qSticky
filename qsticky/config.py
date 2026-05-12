@@ -32,6 +32,13 @@ class Settings(BaseSettings):
         description="Verify SSL certificates for qBittorrent"
     )] = False
 
+    qbittorrent_api_key: Annotated[str, Field(
+        description=(
+            "qBittorrent API key (v5+)."
+            "Generate via qBittorrent Preferences → WebUI → API Key."
+        )
+    )] = ""
+
     check_interval: Annotated[int, Field(
         description="Interval in seconds between port checks"
     )] = 30
