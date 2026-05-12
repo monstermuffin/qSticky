@@ -24,6 +24,9 @@ class QBittorrentClient:
         )
         self._logged_in_once = False
         self.last_login_failed = False
+        self._use_api_key = bool(settings.qbittorrent_api_key)
+        if self._use_api_key:
+            self._validate_api_key(settings.qbittorrent_api_key)
         self._use_unsafe_cookie_jar = self._is_ip_address(settings.qbittorrent_host)
 
     def _is_ip_address(self, host: str) -> bool:
@@ -32,6 +35,19 @@ class QBittorrentClient:
             return True
         except ValueError:
             return False
+
+    def _validate_api_key(self, key: str) -> None:
+        # qBittorrent v5+ requires the key to be exactly 32 chars - "qbt_" + 28 alphanumeric characters.
+        valid = (
+            len(key) == 32
+            and key.startswith("qbt_")
+            and key[4:].isalnum()
+        )
+        if not valid:
+            self.logger.warning(
+                "QBITTORRENT_API_KEY does not match the required format "
+                "Generate a valid key via qBittorrent Preferences → WebUI → API Key."
+            )
 
     def _get_cookie_jar(self) -> Optional[aiohttp.CookieJar]:
         if not self._use_unsafe_cookie_jar:
@@ -78,6 +94,8 @@ class QBittorrentClient:
         self.authenticated = False
 
     async def _ensure_login(self) -> bool:
+        if self._use_api_key:
+            return True
         await self._init_session()
         if self.authenticated:
             return True
@@ -136,6 +154,64 @@ class QBittorrentClient:
         retry: bool = True,
         **kwargs: Any
     ) -> tuple[Optional[int], Optional[str]]:
+        if self._use_api_key:
+            return await self._request_with_api_key(method, path, retry=retry, **kwargs)
+        return await self._request_with_session(method, path, retry=retry, **kwargs)
+
+    async def _request_with_api_key(
+        self,
+        method: str,
+        path: str,
+        *,
+        retry: bool = True,
+        **kwargs: Any
+    ) -> tuple[Optional[int], Optional[str]]:
+        headers = kwargs.pop("headers", {})
+        headers["Authorization"] = f"Bearer {self.settings.qbittorrent_api_key}"
+        kwargs["headers"] = headers
+
+        ssl_context = None
+        if self.settings.qbittorrent_https and not self.settings.qbittorrent_verify_ssl:
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+
+        try:
+            connector = aiohttp.TCPConnector(ssl=ssl_context)
+            async with aiohttp.ClientSession(connector=connector) as session:
+                async with session.request(
+                    method,
+                    f"{self.base_url}{path}",
+                    **kwargs
+                ) as response:
+                    content = await response.text()
+
+                    if response.status == 401:
+                        self.logger.error(
+                            "qBittorrent API key rejected (HTTP 401) - check QBITTORRENT_API_KEY"
+                        )
+                        self.health_status.healthy = False
+                        self.health_status.last_error = "API key auth failed (HTTP 401)"
+                        return response.status, content
+
+                    return response.status, content
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            if retry:
+                self.logger.warning(
+                    f"qBittorrent request to {path} failed: {str(e)}, retrying once"
+                )
+                return await self._request_with_api_key(method, path, retry=False, **kwargs)
+            self.logger.error(f"qBittorrent request to {path} failed: {str(e)}")
+            return None, None
+
+    async def _request_with_session(
+        self,
+        method: str,
+        path: str,
+        *,
+        retry: bool = True,
+        **kwargs: Any
+    ) -> tuple[Optional[int], Optional[str]]:
         if not await self._ensure_login():
             return None, None
 
@@ -148,13 +224,13 @@ class QBittorrentClient:
                 content = await response.text()
 
                 # 403 = session expired, recreate and retry.
-                # 401 on ≥5.2.0 = bad cred
+                # 401 on v5+ = bad cred, no retry.
                 if response.status == 403 and retry:
                     self.logger.warning(
                         f"qBittorrent request to {path} returned {response.status}, recreating session"
                     )
                     await self.reset_session()
-                    return await self.request(method, path, retry=False, **kwargs)
+                    return await self._request_with_session(method, path, retry=False, **kwargs)
 
                 return response.status, content
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
@@ -163,7 +239,7 @@ class QBittorrentClient:
                     f"qBittorrent request to {path} failed: {str(e)}, recreating session"
                 )
                 await self.reset_session()
-                return await self.request(method, path, retry=False, **kwargs)
+                return await self._request_with_session(method, path, retry=False, **kwargs)
 
             self.logger.error(f"qBittorrent request to {path} failed: {str(e)}")
             return None, None

@@ -49,8 +49,12 @@ services:
       QBITTORRENT_HOST: gluetun
       QBITTORRENT_HTTPS: false
       QBITTORRENT_PORT: 8080
-      QBITTORRENT_USER: admin
-      QBITTORRENT_PASS: 'YOURPASS'
+      # Recommended: API key auth (qBittorrent v5+).
+      # If set, username/password below are ignored entirely.
+      QBITTORRENT_API_KEY: 'qbt_xxxx'
+      # Alternative: username/password (comment out API key above if using user auth)
+      # QBITTORRENT_USER: admin
+      # QBITTORRENT_PASS: 'YOURPASS'
       # gluetun settings
       GLUETUN_HOST: gluetun
       GLUETUN_AUTH_TYPE: apikey

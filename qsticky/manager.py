@@ -97,6 +97,11 @@ class PortManager:
         else:
             self.logger.info("Starting qSticky port manager...")
 
+        if self.qbit._use_api_key:
+            self.logger.info("qBittorrent auth: API key")
+        else:
+            self.logger.info("qBittorrent auth: username/password")
+
         while not self.shutdown_event.is_set():
             try:
                 await self.handle_port_change()
