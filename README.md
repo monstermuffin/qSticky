@@ -155,8 +155,12 @@ services:
       QBITTORRENT_HOST: gluetun
       QBITTORRENT_HTTPS: false
       QBITTORRENT_PORT: 8080
-      QBITTORRENT_USER: admin
-      QBITTORRENT_PASS: adminadmin
+      # Recommended: API key auth (qBittorrent v5+).
+      # If set, username/password below are ignored entirely.
+      QBITTORRENT_API_KEY: 'qbt_xxxx'
+      # Alternative: username/password (comment out API key above if using user auth)
+      # QBITTORRENT_USER: admin
+      # QBITTORRENT_PASS: adminadmin
       # gluetun settings
       GLUETUN_HOST: gluetun
       GLUETUN_AUTH_TYPE: apikey
@@ -177,6 +181,16 @@ services:
 > **HTTPS and SSL Certificates**: When using `QBITTORRENT_HTTPS: true`, qSticky defaults to accepting self-signed certificates (`QBITTORRENT_VERIFY_SSL: false`). Set `QBITTORRENT_VERIFY_SSL: true` if you want strict SSL certificate verification.
 
 ## qBittorrent Setup
+
+qSticky supports two mutually exclusive authentication methods for qBittorrent:
+
+| Method | Variables | Notes |
+|--------|-----------|-------|
+| **API key** *(recommended)* | `QBITTORRENT_API_KEY` | qBittorrent v5+. Stateless Bearer token. |
+| Username / password | `QBITTORRENT_USER` + `QBITTORRENT_PASS` | Session-cookie based.|
+
+> [!TIP]
+> **Use the API key where possible.** If `QBITTORRENT_API_KEY` is set, it is used exclusively, qSticky will **not** fall back to username/password if the key is rejected. Generate a key in qBittorrent → Preferences → WebUI → API Key (requires qBittorrent v5+).
 
 qBittorrent can be deployed like the following example:
 ```yaml
@@ -262,8 +276,12 @@ services:
       QBITTORRENT_HOST: gluetun
       QBITTORRENT_HTTPS: false
       QBITTORRENT_PORT: 8080
-      QBITTORRENT_USER: admin
-      QBITTORRENT_PASS: 'YOURPASS'
+      # Recommended: API key auth (qBittorrent v5+).
+      # If set, username/password below are ignored entirely.
+      QBITTORRENT_API_KEY: 'qbt_xxxx'
+      # Alternative: username/password (comment out API key above if using user auth)
+      # QBITTORRENT_USER: admin
+      # QBITTORRENT_PASS: 'YOURPASS'
       # gluetun settings
       GLUETUN_HOST: gluetun
       GLUETUN_AUTH_TYPE: apikey
@@ -286,8 +304,9 @@ All configuration is done through environment variables:
 |---------------------|-------------|---------|
 | QBITTORRENT_HOST | qBittorrent server hostname | gluetun |
 | QBITTORRENT_PORT | qBittorrent server port | 8080 |
-| QBITTORRENT_USER | qBittorrent username | admin |
-| QBITTORRENT_PASS | qBittorrent password | adminadmin |
+| QBITTORRENT_USER | qBittorrent username (used only when `QBITTORRENT_API_KEY` is not set) | admin |
+| QBITTORRENT_PASS | qBittorrent password (used only when `QBITTORRENT_API_KEY` is not set) | adminadmin |
+| QBITTORRENT_API_KEY | qBittorrent API key (v5+). When set, used exclusively | "" |
 | QBITTORRENT_HTTPS | Use HTTPS for qBittorrent connection | false |
 | QBITTORRENT_VERIFY_SSL | Verify SSL certificates for HTTPS connections | false |
 | CHECK_INTERVAL | API check interval in seconds | 30 |
@@ -320,6 +339,7 @@ When successful, the logs will look something like:
 
 ```bash
 qsticky - INFO - Starting qSticky port manager...
+qsticky - INFO - qBittorrent auth: API key
 qsticky - INFO - Port change needed: 54219 -> 45720
 qsticky - INFO - Successfully updated port to 45720
 qsticky - INFO - Initial status - Gluetun: ✓, qBit: ✓, Port: 45720
