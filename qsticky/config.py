@@ -34,7 +34,7 @@ class Settings(BaseSettings):
 
     qbittorrent_api_key: Annotated[str, Field(
         description=(
-            "qBittorrent API key (v5+)."
+            "qBittorrent API key (≥v5.2.0)."
             "Generate via qBittorrent Preferences → WebUI → API Key."
         )
     )] = ""

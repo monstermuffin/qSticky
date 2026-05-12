@@ -37,7 +37,7 @@ class QBittorrentClient:
             return False
 
     def _validate_api_key(self, key: str) -> None:
-        # qBittorrent v5+ requires the key to be exactly 32 chars - "qbt_" + 28 alphanumeric characters.
+        # qBittorrent ≥v5.2.0 requires the key to be exactly 32 chars - "qbt_" + 28 alphanumeric characters.
         valid = (
             len(key) == 32
             and key.startswith("qbt_")
@@ -224,7 +224,7 @@ class QBittorrentClient:
                 content = await response.text()
 
                 # 403 = session expired, recreate and retry.
-                # 401 on v5+ = bad cred, no retry.
+                # 401 on ≥v5.2.0 (with updated WebAPI) = bad cred, no retry.
                 if response.status == 403 and retry:
                     self.logger.warning(
                         f"qBittorrent request to {path} returned {response.status}, recreating session"

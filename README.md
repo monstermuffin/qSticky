@@ -155,7 +155,7 @@ services:
       QBITTORRENT_HOST: gluetun
       QBITTORRENT_HTTPS: false
       QBITTORRENT_PORT: 8080
-      # Recommended: API key auth (qBittorrent v5+).
+      # Recommended: API key auth (qBittorrent ≥v5.2.0).
       # If set, username/password below are ignored entirely.
       QBITTORRENT_API_KEY: 'qbt_xxxx'
       # Alternative: username/password (comment out API key above if using user auth)
@@ -186,11 +186,11 @@ qSticky supports two mutually exclusive authentication methods for qBittorrent:
 
 | Method | Variables | Notes |
 |--------|-----------|-------|
-| **API key** *(recommended)* | `QBITTORRENT_API_KEY` | qBittorrent v5+. Stateless Bearer token. |
+| **API key** *(recommended)* | `QBITTORRENT_API_KEY` | qBittorrent ≥v5.2.0. Stateless Bearer token. |
 | Username / password | `QBITTORRENT_USER` + `QBITTORRENT_PASS` | Session-cookie based.|
 
 > [!TIP]
-> **Use the API key where possible.** If `QBITTORRENT_API_KEY` is set, it is used exclusively, qSticky will **not** fall back to username/password if the key is rejected. Generate a key in qBittorrent → Preferences → WebUI → API Key (requires qBittorrent v5+).
+> **Use the API key where possible.** If `QBITTORRENT_API_KEY` is set, it is used exclusively, qSticky will **not** fall back to username/password if the key is rejected. Generate a key in qBittorrent → Preferences → WebUI → API Key (requires qBittorrent ≥v5.2.0).
 
 qBittorrent can be deployed like the following example:
 ```yaml
@@ -276,7 +276,7 @@ services:
       QBITTORRENT_HOST: gluetun
       QBITTORRENT_HTTPS: false
       QBITTORRENT_PORT: 8080
-      # Recommended: API key auth (qBittorrent v5+).
+      # Recommended: API key auth (qBittorrent ≥v5.2.0).
       # If set, username/password below are ignored entirely.
       QBITTORRENT_API_KEY: 'qbt_xxxx'
       # Alternative: username/password (comment out API key above if using user auth)
@@ -306,7 +306,7 @@ All configuration is done through environment variables:
 | QBITTORRENT_PORT | qBittorrent server port | 8080 |
 | QBITTORRENT_USER | qBittorrent username (used only when `QBITTORRENT_API_KEY` is not set) | admin |
 | QBITTORRENT_PASS | qBittorrent password (used only when `QBITTORRENT_API_KEY` is not set) | adminadmin |
-| QBITTORRENT_API_KEY | qBittorrent API key (v5+). When set, used exclusively | "" |
+| QBITTORRENT_API_KEY | qBittorrent API key (≥v5.2.0). When set, used exclusively | "" |
 | QBITTORRENT_HTTPS | Use HTTPS for qBittorrent connection | false |
 | QBITTORRENT_VERIFY_SSL | Verify SSL certificates for HTTPS connections | false |
 | CHECK_INTERVAL | API check interval in seconds | 30 |
