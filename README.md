@@ -318,6 +318,37 @@ All configuration is done through environment variables:
 | GLUETUN_PASSWORD | Gluetun basic auth password | "" |
 | GLUETUN_APIKEY | Gluetun API key | "" |
 
+## Docker Secrets
+
+You may use [Docker secrets](https://docs.docker.com/compose/how-tos/use-secrets/) to store sensitive credentials. Environment variables take precedence if both are set.
+
+Secret file names must match the lowercase field names below:
+
+| Secret name | Replaces env var |
+|---|---|
+| `qbittorrent_user` | `QBITTORRENT_USER` |
+| `qbittorrent_pass` | `QBITTORRENT_PASS` |
+| `qbittorrent_api_key` | `QBITTORRENT_API_KEY` |
+| `gluetun_username` | `GLUETUN_USERNAME` |
+| `gluetun_password` | `GLUETUN_PASSWORD` |
+| `gluetun_apikey` | `GLUETUN_APIKEY` |
+
+### Example
+
+```yaml
+secrets:
+  qbittorrent_api_key:
+    file: ./secrets/qbittorrent_api_key.txt
+  gluetun_apikey:
+    file: ./secrets/gluetun_apikey.txt
+
+services:
+  qsticky:
+    ... # qsticky config ... #
+```
+
+Each secret file should contain only the secret value.
+
 ## Verification
 
 To verify qSticky is working:
