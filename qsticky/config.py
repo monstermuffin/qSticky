@@ -72,7 +72,7 @@ class Settings(BaseSettings):
         description="Gluetun API key"
     )] = ""
 
-    model_config = ConfigDict(env_prefix="")
+    model_config = ConfigDict(env_prefix="", secrets_dir="/run/secrets")
 
 
 @dataclass

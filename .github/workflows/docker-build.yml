@@ -3,7 +3,7 @@ name: Build and Push Multi-Arch Image
 on:
   workflow_dispatch:
   push:
-    branches: [ main, dev, qbit-session ]
+    branches: [ main, dev, qbit-session, feat/*, fix/*, hotfix/* ]
     tags:
       - 'v*'
 
