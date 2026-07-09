@@ -3,5 +3,5 @@ zstandard>=0.23.0
 pydantic==2.13.4
 pydantic-settings==2.14.1
 watchfiles==1.1.1
-typing-extensions==4.15.0
+typing-extensions==4.16.0
 httpie==3.2.4
